@@ -363,6 +363,26 @@ main {
     overflow: hidden;
 }
 
+/* Tile numbers */
+.tile-number {
+    font-size: 0.45rem;
+    color: rgba(255, 255, 255, 0.55);
+    pointer-events: none;
+    z-index: 1;
+    line-height: 1;
+    font-weight: 500;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+.tile:hover .tile-number {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.tile.sold .tile-number,
+.tile.sponsor .tile-number {
+    color: rgba(255, 255, 255, 0.7);
+}
+
 .tile:hover { background: var(--available-hover); border-color: rgba(255,255,255,0.25); z-index: 4; }
 .tile.sold { background: rgba(230, 168, 23, 0.7); border-color: rgba(230, 168, 23, 0.4); }
 .tile.sold:hover { background: rgba(230, 168, 23, 0.85); border-color: rgba(230, 168, 23, 0.6); }
@@ -609,6 +629,7 @@ footer {
     .stats { gap: 0.8rem; }
     .stat-number { font-size: 1.1rem; }
     .btn-tool { font-size: 0.7rem; padding: 0.35rem 0.6rem; }
+    .tile-number { font-size: 0.35rem; }
 }
 
 /* Fallback for browsers without aspect-ratio support */

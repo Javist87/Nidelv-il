@@ -267,13 +267,19 @@
                 tile.dataset.row = row;
                 tile.dataset.col = col;
 
+                var tileNum = row * COLS + col + 1;
+                var numSpan = document.createElement('span');
+                numSpan.className = 'tile-number';
+                numSpan.textContent = tileNum;
+                tile.appendChild(numSpan);
+
                 var key = tileKey(row, col);
                 var data = getTileData(key);
                 if (data) {
                     tile.classList.add(data.logo || data.group ? 'sponsor' : 'sold');
                     var tooltip = document.createElement('span');
                     tooltip.className = 'tooltip';
-                    tooltip.textContent = data.name;
+                    tooltip.textContent = '#' + tileNum + ' — ' + data.name;
                     tile.appendChild(tooltip);
                 }
 
@@ -360,8 +366,11 @@
         Object.keys(tiles).forEach(function (key) {
             var d = getTileData(key);
             if (!d) return;
-            if (!names[d.name]) names[d.name] = { count: 0, logo: d.logo || null };
+            var p = key.split('-');
+            var num = +p[0] * COLS + +p[1] + 1;
+            if (!names[d.name]) names[d.name] = { count: 0, logo: d.logo || null, nums: [] };
             names[d.name].count++;
+            names[d.name].nums.push(num);
         });
 
         var sorted = Object.keys(names).sort(function (a, b) {
@@ -393,7 +402,9 @@
 
             var tilesEl = document.createElement('div');
             tilesEl.className = 'sponsor-card-tiles';
-            tilesEl.textContent = info.count + (info.count === 1 ? ' flis' : ' fliser');
+            info.nums.sort(function(a, b) { return a - b; });
+            var numsText = info.nums.length <= 5 ? ' (#' + info.nums.join(', #') + ')' : '';
+            tilesEl.textContent = info.count + (info.count === 1 ? ' flis' : ' fliser') + numsText;
             card.appendChild(tilesEl);
 
             sponsorGrid.appendChild(card);
@@ -449,7 +460,8 @@
     function openModal(row, col) {
         currentTile = { keys: [tileKey(row, col)] };
         var data = getTileData(tileKey(row, col));
-        modalTitle.textContent = 'Flis (rad ' + (row + 1) + ', kolonne ' + (col + 1) + ')';
+        var tileNum = row * COLS + col + 1;
+        modalTitle.textContent = 'Flis #' + tileNum + ' (rad ' + (row + 1) + ', kolonne ' + (col + 1) + ')';
         nameInput.value = data ? data.name : '';
         currentLogo = data ? (data.logo || null) : null;
         updateLogoPreview();
@@ -559,7 +571,15 @@
                 if (el) el.classList.add('highlight');
             }
         });
-        if (highlightedTiles.length === 0) alert('Ingen fliser funnet med "' + searchInput.value.trim() + '"');
+        if (highlightedTiles.length === 0) {
+            alert('Ingen fliser funnet med "' + searchInput.value.trim() + '"');
+        } else if (highlightedTiles.length <= 10) {
+            var nums = highlightedTiles.map(function(key) {
+                var p = key.split('-');
+                return '#' + (+p[0] * COLS + +p[1] + 1);
+            });
+            alert('Funnet ' + highlightedTiles.length + ' fliser: ' + nums.join(', '));
+        }
     }
 
     function clearHighlights() {
@@ -580,9 +600,17 @@
 
     function exportToExcel() {
         var data = [];
+        // Header row with column numbers
+        var header = [];
+        for (var h = 0; h < COLS; h++) header.push('Kol ' + (h + 1));
+        data.push(header);
         for (var r = 0; r < ROWS; r++) {
             var row = [];
-            for (var c = 0; c < COLS; c++) { var d = getTileData(tileKey(r, c)); row.push(d ? d.name : ''); }
+            for (var c = 0; c < COLS; c++) {
+                var d = getTileData(tileKey(r, c));
+                var num = r * COLS + c + 1;
+                row.push(d ? '#' + num + ' ' + d.name : '#' + num);
+            }
             data.push(row);
         }
         var ws = XLSX.utils.aoa_to_sheet(data);
