@@ -721,3 +721,17 @@ footer {
         padding: 0.35rem 0.6rem;
     }
 }
+
+/* Fallback for browsers without aspect-ratio support */
+@supports not (aspect-ratio: 1050 / 680) {
+  .football-field {
+    padding-top: calc(680 / 1050 * 100%);
+  }
+  .football-field > * {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+}
