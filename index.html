@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <header>
@@ -37,6 +38,21 @@
                 <input type="text" id="search-input" placeholder="Søk etter navn...">
                 <button id="search-btn">Søk</button>
             </div>
+        </section>
+
+        <section class="excel-bar">
+            <div class="excel-actions">
+                <button class="btn-excel" id="export-btn">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M8 11l-3-3M8 11l3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    Eksporter til Excel
+                </button>
+                <label class="btn-excel" id="import-label">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 11V1M8 1l-3 3M8 1l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    Importer fra Excel
+                    <input type="file" id="import-input" accept=".xlsx,.xls,.csv" hidden>
+                </label>
+            </div>
+            <span class="excel-hint">Excel-arket speiler banen: 30 rader &times; 30 kolonner. Rediger i Excel og importer tilbake.</span>
         </section>
 
         <section class="legend">
