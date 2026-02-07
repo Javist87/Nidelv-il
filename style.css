@@ -313,6 +313,11 @@ main {
 .legend-highlight { background: var(--highlight-color); }
 
 /* === Field === */
+.field-wrapper {
+    overflow-x: auto;
+    padding: 0.5rem 0;
+}
+
 .field-surroundings {
     padding: 20px;
     background: #1a3d1a;
@@ -321,18 +326,12 @@ main {
     background-position: center;
 }
 
-.field-wrapper {
-    display: flex;
-    justify-content: center;
-    overflow-x: auto;
-    padding: 0.5rem 0;
-}
-
 .football-field {
     position: relative;
     width: 100%;
     max-width: 1050px;
     aspect-ratio: 1050 / 680;
+    margin: 0 auto;
     background: repeating-linear-gradient(90deg, var(--grass-dark) 0%, var(--grass-dark) 3.33%, var(--grass-light) 3.33%, var(--grass-light) 6.66%);
     border-radius: 4px;
     box-shadow: var(--shadow);
