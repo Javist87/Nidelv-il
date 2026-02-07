@@ -40,19 +40,42 @@
             </div>
         </section>
 
-        <section class="excel-bar">
-            <div class="excel-actions">
-                <button class="btn-excel" id="export-btn">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M8 11l-3-3M8 11l3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                    Eksporter til Excel
+        <section class="toolbar">
+            <div class="toolbar-left">
+                <div class="excel-actions">
+                    <button class="btn-tool" id="export-btn">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M8 11l-3-3M8 11l3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        Eksporter Excel
+                    </button>
+                    <label class="btn-tool">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 11V1M8 1l-3 3M8 1l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        Importer Excel
+                        <input type="file" id="import-input" accept=".xlsx,.xls,.csv" hidden>
+                    </label>
+                </div>
+                <div class="toolbar-divider"></div>
+                <button class="btn-tool" id="multiselect-btn">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="10" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="10" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="10" y="10" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
+                    Velg flere fliser (bedrift)
                 </button>
-                <label class="btn-excel" id="import-label">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 11V1M8 1l-3 3M8 1l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                    Importer fra Excel
-                    <input type="file" id="import-input" accept=".xlsx,.xls,.csv" hidden>
-                </label>
             </div>
-            <span class="excel-hint">Excel-arket speiler banen: 30 rader &times; 30 kolonner. Rediger i Excel og importer tilbake.</span>
+            <div class="toolbar-right">
+                <label class="btn-tool btn-bg">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="5" cy="6" r="1.5" fill="currentColor"/><path d="M1 11l4-3 3 2 3-4 4 5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                    Bakgrunnsbilde
+                    <input type="file" id="bg-input" accept="image/*" hidden>
+                </label>
+                <button class="btn-tool btn-bg-clear" id="bg-clear-btn" style="display:none">Fjern bakgrunn</button>
+            </div>
+        </section>
+
+        <!-- Selection bar (shown in multi-select mode) -->
+        <section class="selection-bar" id="selection-bar" style="display:none">
+            <span id="selection-count">0 fliser valgt</span>
+            <div class="selection-actions">
+                <button class="btn btn-primary" id="assign-btn">Tildel navn og logo</button>
+                <button class="btn btn-secondary" id="cancel-select-btn">Avbryt</button>
+            </div>
         </section>
 
         <section class="legend">
@@ -62,7 +85,11 @@
             </div>
             <div class="legend-item">
                 <span class="legend-color legend-sold"></span>
-                <span>Solgt</span>
+                <span>Solgt (person)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color legend-sponsor"></span>
+                <span>Sponsor (logo)</span>
             </div>
             <div class="legend-item">
                 <span class="legend-color legend-highlight"></span>
@@ -71,57 +98,45 @@
         </section>
 
         <div class="field-wrapper">
-            <div class="football-field" id="football-field">
-                <svg class="field-markings" viewBox="0 0 1050 680" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Outer boundary -->
-                    <rect x="5" y="5" width="1040" height="670" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="3"/>
+            <div class="field-surroundings" id="field-surroundings">
+                <div class="football-field" id="football-field">
+                    <svg class="field-markings" viewBox="0 0 1050 680" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Outer boundary -->
+                        <rect x="5" y="5" width="1040" height="670" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="3"/>
+                        <!-- Center line -->
+                        <line x1="525" y1="5" x2="525" y2="675" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                        <!-- Center circle -->
+                        <circle cx="525" cy="340" r="91.5" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                        <!-- Center spot -->
+                        <circle cx="525" cy="340" r="5" fill="rgba(255,255,255,0.6)"/>
+                        <!-- Left penalty area -->
+                        <rect x="5" y="138.5" width="165" height="403" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                        <!-- Right penalty area -->
+                        <rect x="880" y="138.5" width="165" height="403" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                        <!-- Left goal area -->
+                        <rect x="5" y="248.5" width="55" height="183" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                        <!-- Right goal area -->
+                        <rect x="990" y="248.5" width="55" height="183" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                        <!-- Left penalty spot -->
+                        <circle cx="115" cy="340" r="4" fill="rgba(255,255,255,0.6)"/>
+                        <!-- Right penalty spot -->
+                        <circle cx="935" cy="340" r="4" fill="rgba(255,255,255,0.6)"/>
+                        <!-- Left penalty arc -->
+                        <path d="M 165 267 A 91.5 91.5 0 0 1 165 413" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                        <!-- Right penalty arc -->
+                        <path d="M 885 267 A 91.5 91.5 0 0 0 885 413" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                        <!-- Corner arcs -->
+                        <path d="M 15 5 A 10 10 0 0 0 5 15" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                        <path d="M 1035 5 A 10 10 0 0 1 1045 15" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                        <path d="M 5 665 A 10 10 0 0 0 15 675" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                        <path d="M 1045 665 A 10 10 0 0 1 1035 675" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                        <!-- Goals -->
+                        <rect x="-20" y="293" width="25" height="94" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" rx="2"/>
+                        <rect x="1045" y="293" width="25" height="94" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" rx="2"/>
+                    </svg>
 
-                    <!-- Center line -->
-                    <line x1="525" y1="5" x2="525" y2="675" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-
-                    <!-- Center circle -->
-                    <circle cx="525" cy="340" r="91.5" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-
-                    <!-- Center spot -->
-                    <circle cx="525" cy="340" r="5" fill="rgba(255,255,255,0.6)"/>
-
-                    <!-- Left penalty area -->
-                    <rect x="5" y="138.5" width="165" height="403" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-
-                    <!-- Right penalty area -->
-                    <rect x="880" y="138.5" width="165" height="403" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-
-                    <!-- Left goal area -->
-                    <rect x="5" y="248.5" width="55" height="183" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-
-                    <!-- Right goal area -->
-                    <rect x="990" y="248.5" width="55" height="183" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-
-                    <!-- Left penalty spot -->
-                    <circle cx="115" cy="340" r="4" fill="rgba(255,255,255,0.6)"/>
-
-                    <!-- Right penalty spot -->
-                    <circle cx="935" cy="340" r="4" fill="rgba(255,255,255,0.6)"/>
-
-                    <!-- Left penalty arc -->
-                    <path d="M 165 267 A 91.5 91.5 0 0 1 165 413" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-
-                    <!-- Right penalty arc -->
-                    <path d="M 885 267 A 91.5 91.5 0 0 0 885 413" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-
-                    <!-- Corner arcs -->
-                    <path d="M 15 5 A 10 10 0 0 0 5 15" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                    <path d="M 1035 5 A 10 10 0 0 1 1045 15" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                    <path d="M 5 665 A 10 10 0 0 0 15 675" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                    <path d="M 1045 665 A 10 10 0 0 1 1035 675" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-
-                    <!-- Goals -->
-                    <rect x="-20" y="293" width="25" height="94" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" rx="2"/>
-                    <rect x="1045" y="293" width="25" height="94" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" rx="2"/>
-                </svg>
-
-                <div class="grid" id="grid">
-                    <!-- 30x30 tiles generated by JavaScript -->
+                    <div class="grid" id="grid"></div>
+                    <div class="logo-overlays" id="logo-overlays"></div>
                 </div>
             </div>
         </div>
@@ -131,12 +146,13 @@
             <p>
                 Nidelv IL skal legge nytt kunstgress! Du kan støtte oss ved å kjøpe en flis på banen.
                 Klikk på en ledig flis for å legge inn ditt navn eller bedriftens navn.
+                Bedrifter kan velge flere fliser og laste opp sin logo.
                 Sammen bygger vi en ny bane for fremtidens fotballspillere!
             </p>
         </section>
     </main>
 
-    <!-- Modal for tile editing -->
+    <!-- Modal for single tile -->
     <div class="modal-overlay" id="modal-overlay">
         <div class="modal" id="modal">
             <div class="modal-header">
@@ -144,13 +160,27 @@
                 <button class="modal-close" id="close-btn">&times;</button>
             </div>
             <div class="modal-body">
-                <label for="tile-name-input">Navn på flis:</label>
+                <label for="tile-name-input">Navn:</label>
                 <input type="text" id="tile-name-input" placeholder="Skriv inn navn..." maxlength="40">
+
+                <label for="tile-logo-input" class="logo-label">Logo (valgfritt):</label>
+                <div class="logo-upload-area">
+                    <div class="logo-preview" id="logo-preview">
+                        <span class="logo-placeholder">Ingen logo</span>
+                    </div>
+                    <div class="logo-buttons">
+                        <label class="btn btn-secondary btn-small">
+                            Last opp logo
+                            <input type="file" id="tile-logo-input" accept="image/*" hidden>
+                        </label>
+                        <button class="btn btn-danger btn-small" id="remove-logo-btn" style="display:none">Fjern logo</button>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary" id="save-btn">Lagre</button>
                 <button class="btn btn-secondary" id="cancel-btn">Avbryt</button>
-                <button class="btn btn-danger" id="clear-btn">Fjern navn</button>
+                <button class="btn btn-danger" id="clear-btn">Fjern alt</button>
             </div>
         </div>
     </div>
