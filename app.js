@@ -16,6 +16,7 @@
     var highlightedTiles = [];
     var multiSelectMode = false;
     var selectedTiles = [];
+    var firstCorner = null; // for shift-click rectangular select
 
     // DOM refs
     var gridEl = document.getElementById('grid');
@@ -44,6 +45,7 @@
     var selectionCount = document.getElementById('selection-count');
     var assignBtn = document.getElementById('assign-btn');
     var cancelSelectBtn = document.getElementById('cancel-select-btn');
+    var selectionHint = document.getElementById('selection-hint');
     var bgInput = document.getElementById('bg-input');
     var bgClearBtn = document.getElementById('bg-clear-btn');
     var fieldSurroundings = document.getElementById('field-surroundings');
@@ -284,7 +286,7 @@
                 }
 
                 (function (r, c) {
-                    tile.addEventListener('click', function () { onTileClick(r, c); });
+                    tile.addEventListener('click', function (e) { onTileClick(r, c, e); });
                 })(row, col);
 
                 gridEl.appendChild(tile);
@@ -413,10 +415,10 @@
 
     // ===== Tile click =====
 
-    function onTileClick(row, col) {
+    function onTileClick(row, col, event) {
         if (!isAdmin()) return;
         if (multiSelectMode) {
-            toggleTileSelection(row, col);
+            toggleTileSelection(row, col, event && event.shiftKey);
         } else {
             openModal(row, col);
         }
@@ -427,25 +429,57 @@
     function enterMultiSelectMode() {
         multiSelectMode = true;
         selectedTiles = [];
+        firstCorner = null;
         multiselectBtn.classList.add('active');
         selectionBar.style.display = 'flex';
+        selectionHint.style.display = 'block';
         updateSelectionCount();
     }
 
     function exitMultiSelectMode() {
         multiSelectMode = false;
         selectedTiles = [];
+        firstCorner = null;
         multiselectBtn.classList.remove('active');
         selectionBar.style.display = 'none';
+        selectionHint.style.display = 'none';
         var sel = gridEl.querySelectorAll('.selected');
         for (var i = 0; i < sel.length; i++) sel[i].classList.remove('selected');
     }
 
-    function toggleTileSelection(row, col) {
+    function toggleTileSelection(row, col, shiftKey) {
+        if (shiftKey && firstCorner) {
+            // Select rectangular area between firstCorner and this tile
+            var r1 = Math.min(firstCorner.row, row);
+            var r2 = Math.max(firstCorner.row, row);
+            var c1 = Math.min(firstCorner.col, col);
+            var c2 = Math.max(firstCorner.col, col);
+            // Clear previous selection
+            selectedTiles = [];
+            var sel = gridEl.querySelectorAll('.selected');
+            for (var i = 0; i < sel.length; i++) sel[i].classList.remove('selected');
+            // Select all tiles in rectangle
+            for (var r = r1; r <= r2; r++) {
+                for (var c = c1; c <= c2; c++) {
+                    var k = tileKey(r, c);
+                    selectedTiles.push(k);
+                    var el = gridEl.children[r * COLS + c];
+                    if (el) el.classList.add('selected');
+                }
+            }
+            var w = c2 - c1 + 1;
+            var h = r2 - r1 + 1;
+            selectionCount.textContent = selectedTiles.length + ' fliser valgt (' + w + 'x' + h + ')';
+            assignBtn.disabled = false;
+            return;
+        }
+
+        // Normal click - toggle single tile and set as first corner
+        firstCorner = { row: row, col: col };
         var key = tileKey(row, col);
         var idx = selectedTiles.indexOf(key);
         var el = gridEl.children[row * COLS + col];
-        if (idx >= 0) { selectedTiles.splice(idx, 1); if (el) el.classList.remove('selected'); }
+        if (idx >= 0) { selectedTiles.splice(idx, 1); if (el) el.classList.remove('selected'); firstCorner = null; }
         else { selectedTiles.push(key); if (el) el.classList.add('selected'); }
         updateSelectionCount();
     }

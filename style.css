@@ -281,6 +281,19 @@ main {
     font-weight: 500;
 }
 
+.selection-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.selection-hint {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+}
+
 .selection-actions { display: flex; gap: 0.5rem; }
 
 /* === Legend === */
