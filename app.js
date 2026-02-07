@@ -5,18 +5,19 @@
     var COLS = 30;
     var STORAGE_KEY = 'nidelv-il-fliser';
     var SETTINGS_KEY = 'nidelv-il-settings';
-    var MAX_LOGO_SIZE = 150; // Max logo dimension in pixels for storage
+    var SESSION_KEY = 'nidelv-il-admin';
+    var MAX_LOGO_SIZE = 150;
 
     // State
     var tiles = {};
     var settings = {};
     var currentTile = null;
-    var currentLogo = null; // base64 string for the logo being edited
+    var currentLogo = null;
     var highlightedTiles = [];
     var multiSelectMode = false;
     var selectedTiles = [];
 
-    // DOM elements
+    // DOM refs
     var gridEl = document.getElementById('grid');
     var logoOverlaysEl = document.getElementById('logo-overlays');
     var modalOverlay = document.getElementById('modal-overlay');
@@ -31,7 +32,9 @@
     var closeBtn = document.getElementById('close-btn');
     var soldCountEl = document.getElementById('sold-count');
     var availableCountEl = document.getElementById('available-count');
+    var raisedAmountEl = document.getElementById('raised-amount');
     var progressEl = document.getElementById('progress-percent');
+    var progressBarEl = document.getElementById('progress-bar');
     var searchInput = document.getElementById('search-input');
     var searchBtn = document.getElementById('search-btn');
     var exportBtn = document.getElementById('export-btn');
@@ -44,24 +47,41 @@
     var bgInput = document.getElementById('bg-input');
     var bgClearBtn = document.getElementById('bg-clear-btn');
     var fieldSurroundings = document.getElementById('field-surroundings');
+    var sponsorGrid = document.getElementById('sponsor-grid');
 
-    // ===== Data helpers =====
+    // Admin DOM
+    var adminBtn = document.getElementById('admin-btn');
+    var adminBadge = document.getElementById('admin-badge');
+    var logoutBtn = document.getElementById('logout-btn');
+    var loginOverlay = document.getElementById('login-overlay');
+    var loginTitle = document.getElementById('login-title');
+    var loginHint = document.getElementById('login-hint');
+    var adminPassword = document.getElementById('admin-password');
+    var loginSubmitBtn = document.getElementById('login-submit-btn');
+    var loginCancelBtn = document.getElementById('login-cancel-btn');
+    var loginCloseBtn = document.getElementById('login-close-btn');
 
-    function tileKey(row, col) {
-        return row + '-' + col;
-    }
+    // Settings DOM
+    var settingsBtn = document.getElementById('settings-btn');
+    var settingsOverlay = document.getElementById('settings-overlay');
+    var settingsCloseBtn = document.getElementById('settings-close-btn');
+    var settingsSaveBtn = document.getElementById('settings-save-btn');
+    var settingsCancelBtn = document.getElementById('settings-cancel-btn');
+    var tilePriceInput = document.getElementById('tile-price-input');
+    var newPasswordInput = document.getElementById('new-password');
+    var confirmPasswordInput = document.getElementById('confirm-password');
 
-    // Get tile data as object (handles migration from old string format)
+    // ===== Helpers =====
+
+    function tileKey(row, col) { return row + '-' + col; }
+
     function getTileData(key) {
         var val = tiles[key];
         if (!val) return null;
-        if (typeof val === 'string') {
-            return { name: val };
-        }
+        if (typeof val === 'string') return { name: val };
         return val;
     }
 
-    // Set tile data
     function setTileData(key, name, logo, group) {
         var data = { name: name };
         if (logo) data.logo = logo;
@@ -69,37 +89,151 @@
         tiles[key] = data;
     }
 
-    // ===== localStorage =====
+    // ===== Password hashing =====
+
+    function hashPassword(password) {
+        // Simple hash for client-side use
+        var hash = 0;
+        for (var i = 0; i < password.length; i++) {
+            var chr = password.charCodeAt(i);
+            hash = ((hash << 5) - hash) + chr;
+            hash |= 0;
+        }
+        // Double hash for more entropy
+        var str = String(hash);
+        var hash2 = 0;
+        for (var j = 0; j < str.length; j++) {
+            hash2 = ((hash2 << 5) - hash2) + str.charCodeAt(j);
+            hash2 |= 0;
+        }
+        return 'h_' + Math.abs(hash) + '_' + Math.abs(hash2);
+    }
+
+    // ===== Admin =====
+
+    function isAdmin() {
+        return sessionStorage.getItem(SESSION_KEY) === 'true';
+    }
+
+    function setAdminMode(active) {
+        if (active) {
+            sessionStorage.setItem(SESSION_KEY, 'true');
+            document.body.classList.remove('viewer');
+            adminBadge.style.display = 'block';
+            adminBtn.style.display = 'none';
+        } else {
+            sessionStorage.removeItem(SESSION_KEY);
+            document.body.classList.add('viewer');
+            adminBadge.style.display = 'none';
+            adminBtn.style.display = 'block';
+            if (multiSelectMode) exitMultiSelectMode();
+        }
+    }
+
+    function openLoginModal() {
+        var hasPassword = settings.adminPasswordHash;
+        if (hasPassword) {
+            loginTitle.textContent = 'Admin-innlogging';
+            loginHint.textContent = '';
+            loginHint.className = 'login-hint';
+            loginSubmitBtn.textContent = 'Logg inn';
+        } else {
+            loginTitle.textContent = 'Opprett admin-passord';
+            loginHint.textContent = 'Ingen passord er satt ennå. Velg et passord (min 4 tegn).';
+            loginHint.className = 'login-hint';
+            loginSubmitBtn.textContent = 'Opprett passord';
+        }
+        adminPassword.value = '';
+        loginOverlay.classList.add('active');
+        adminPassword.focus();
+    }
+
+    function closeLoginModal() {
+        loginOverlay.classList.remove('active');
+        adminPassword.value = '';
+    }
+
+    function handleLogin() {
+        var pw = adminPassword.value;
+        if (pw.length < 4) {
+            loginHint.textContent = 'Passordet må ha minst 4 tegn.';
+            loginHint.className = 'login-hint error';
+            return;
+        }
+
+        var pwHash = hashPassword(pw);
+
+        if (!settings.adminPasswordHash) {
+            // First time - set password
+            settings.adminPasswordHash = pwHash;
+            saveSettings();
+            setAdminMode(true);
+            closeLoginModal();
+        } else if (pwHash === settings.adminPasswordHash) {
+            // Correct password
+            setAdminMode(true);
+            closeLoginModal();
+        } else {
+            loginHint.textContent = 'Feil passord. Prøv igjen.';
+            loginHint.className = 'login-hint error';
+            adminPassword.value = '';
+            adminPassword.focus();
+        }
+    }
+
+    // ===== Settings =====
+
+    function openSettingsModal() {
+        tilePriceInput.value = settings.tilePrice || '';
+        newPasswordInput.value = '';
+        confirmPasswordInput.value = '';
+        settingsOverlay.classList.add('active');
+    }
+
+    function closeSettingsModal() {
+        settingsOverlay.classList.remove('active');
+    }
+
+    function saveSettingsForm() {
+        var price = parseInt(tilePriceInput.value);
+        if (!isNaN(price) && price >= 0) {
+            settings.tilePrice = price;
+        } else {
+            delete settings.tilePrice;
+        }
+
+        var newPw = newPasswordInput.value;
+        var confirmPw = confirmPasswordInput.value;
+        if (newPw) {
+            if (newPw.length < 4) {
+                alert('Nytt passord må ha minst 4 tegn.');
+                return;
+            }
+            if (newPw !== confirmPw) {
+                alert('Passordene er ikke like.');
+                return;
+            }
+            settings.adminPasswordHash = hashPassword(newPw);
+        }
+
+        saveSettings();
+        updateStats();
+        closeSettingsModal();
+    }
+
+    // ===== Storage =====
 
     function loadData() {
-        try {
-            var saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) tiles = JSON.parse(saved);
-        } catch (e) {
-            tiles = {};
-        }
-        try {
-            var s = localStorage.getItem(SETTINGS_KEY);
-            if (s) settings = JSON.parse(s);
-        } catch (e) {
-            settings = {};
-        }
+        try { var s = localStorage.getItem(STORAGE_KEY); if (s) tiles = JSON.parse(s); } catch (e) { tiles = {}; }
+        try { var s2 = localStorage.getItem(SETTINGS_KEY); if (s2) settings = JSON.parse(s2); } catch (e) { settings = {}; }
     }
 
     function saveData() {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(tiles));
-        } catch (e) {
-            console.error('Kunne ikke lagre flisdata:', e);
-        }
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tiles)); } catch (e) { console.error('Lagringsfeil:', e); }
     }
 
     function saveSettings() {
-        try {
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-        } catch (e) {
-            console.error('Kunne ikke lagre innstillinger:', e);
-        }
+        try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { console.error('Lagringsfeil:', e); }
     }
 
     // ===== Image resizing =====
@@ -109,18 +243,12 @@
         reader.onload = function (e) {
             var img = new Image();
             img.onload = function () {
-                var w = img.width;
-                var h = img.height;
-                if (w <= maxDim && h <= maxDim) {
-                    callback(e.target.result);
-                    return;
-                }
-                var scale = Math.min(maxDim / w, maxDim / h);
+                if (img.width <= maxDim && img.height <= maxDim) { callback(e.target.result); return; }
+                var scale = Math.min(maxDim / img.width, maxDim / img.height);
                 var canvas = document.createElement('canvas');
-                canvas.width = Math.round(w * scale);
-                canvas.height = Math.round(h * scale);
-                var ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
                 callback(canvas.toDataURL('image/png', 0.8));
             };
             img.src = e.target.result;
@@ -128,7 +256,7 @@
         reader.readAsDataURL(file);
     }
 
-    // ===== Grid building =====
+    // ===== Grid =====
 
     function buildGrid() {
         gridEl.innerHTML = '';
@@ -142,11 +270,7 @@
                 var key = tileKey(row, col);
                 var data = getTileData(key);
                 if (data) {
-                    if (data.logo || data.group) {
-                        tile.classList.add('sponsor');
-                    } else {
-                        tile.classList.add('sold');
-                    }
+                    tile.classList.add(data.logo || data.group ? 'sponsor' : 'sold');
                     var tooltip = document.createElement('span');
                     tooltip.className = 'tooltip';
                     tooltip.textContent = data.name;
@@ -154,9 +278,7 @@
                 }
 
                 (function (r, c) {
-                    tile.addEventListener('click', function () {
-                        onTileClick(r, c);
-                    });
+                    tile.addEventListener('click', function () { onTileClick(r, c); });
                 })(row, col);
 
                 gridEl.appendChild(tile);
@@ -169,92 +291,119 @@
 
     function renderLogoOverlays() {
         logoOverlaysEl.innerHTML = '';
-
-        // Collect groups and single tiles with logos
         var groups = {};
         var singles = [];
 
         Object.keys(tiles).forEach(function (key) {
             var data = getTileData(key);
             if (!data || !data.logo) return;
-
             if (data.group) {
-                if (!groups[data.group]) {
-                    groups[data.group] = { logo: data.logo, keys: [] };
-                }
+                if (!groups[data.group]) groups[data.group] = { logo: data.logo, keys: [] };
                 groups[data.group].keys.push(key);
             } else {
                 singles.push(key);
             }
         });
 
-        // Render group logos (spanning bounding box)
-        Object.keys(groups).forEach(function (groupId) {
-            var group = groups[groupId];
-            var bounds = getBounds(group.keys);
-            createLogoOverlay(bounds, group.logo);
+        Object.keys(groups).forEach(function (gid) {
+            createLogoOverlay(getBounds(groups[gid].keys), groups[gid].logo);
         });
-
-        // Render single tile logos
         singles.forEach(function (key) {
-            var data = getTileData(key);
-            var bounds = getBounds([key]);
-            createLogoOverlay(bounds, data.logo);
+            createLogoOverlay(getBounds([key]), getTileData(key).logo);
         });
     }
 
     function getBounds(keys) {
-        var minRow = ROWS, maxRow = 0, minCol = COLS, maxCol = 0;
-        keys.forEach(function (key) {
-            var parts = key.split('-');
-            var r = parseInt(parts[0]);
-            var c = parseInt(parts[1]);
-            if (r < minRow) minRow = r;
-            if (r > maxRow) maxRow = r;
-            if (c < minCol) minCol = c;
-            if (c > maxCol) maxCol = c;
+        var minR = ROWS, maxR = 0, minC = COLS, maxC = 0;
+        keys.forEach(function (k) {
+            var p = k.split('-'); var r = +p[0]; var c = +p[1];
+            if (r < minR) minR = r; if (r > maxR) maxR = r;
+            if (c < minC) minC = c; if (c > maxC) maxC = c;
         });
-        return { minRow: minRow, maxRow: maxRow, minCol: minCol, maxCol: maxCol };
+        return { minRow: minR, maxRow: maxR, minCol: minC, maxCol: maxC };
     }
 
-    function createLogoOverlay(bounds, logoSrc) {
+    function createLogoOverlay(b, src) {
         var div = document.createElement('div');
         div.className = 'logo-overlay';
-
-        var left = (bounds.minCol / COLS) * 100;
-        var top = (bounds.minRow / ROWS) * 100;
-        var width = ((bounds.maxCol - bounds.minCol + 1) / COLS) * 100;
-        var height = ((bounds.maxRow - bounds.minRow + 1) / ROWS) * 100;
-
-        div.style.left = left + '%';
-        div.style.top = top + '%';
-        div.style.width = width + '%';
-        div.style.height = height + '%';
-
+        div.style.left = (b.minCol / COLS * 100) + '%';
+        div.style.top = (b.minRow / ROWS * 100) + '%';
+        div.style.width = ((b.maxCol - b.minCol + 1) / COLS * 100) + '%';
+        div.style.height = ((b.maxRow - b.minRow + 1) / ROWS * 100) + '%';
         var img = document.createElement('img');
-        img.src = logoSrc;
-        img.alt = 'Sponsor logo';
+        img.src = src;
+        img.alt = 'Logo';
         div.appendChild(img);
-
         logoOverlaysEl.appendChild(div);
     }
 
-    // ===== Statistics =====
+    // ===== Stats =====
 
     function updateStats() {
         var soldCount = Object.keys(tiles).length;
         var total = ROWS * COLS;
-        var availableCount = total - soldCount;
         var percent = Math.round((soldCount / total) * 100);
+        var price = settings.tilePrice || 0;
 
         soldCountEl.textContent = soldCount;
-        availableCountEl.textContent = availableCount;
+        availableCountEl.textContent = total - soldCount;
         progressEl.textContent = percent + '%';
+        progressBarEl.style.width = percent + '%';
+        raisedAmountEl.textContent = price > 0 ? 'kr ' + (soldCount * price).toLocaleString('nb-NO') : '-';
     }
 
-    // ===== Tile click handling =====
+    // ===== Sponsor list =====
+
+    function renderSponsorList() {
+        sponsorGrid.innerHTML = '';
+        var names = {};
+        Object.keys(tiles).forEach(function (key) {
+            var d = getTileData(key);
+            if (!d) return;
+            if (!names[d.name]) names[d.name] = { count: 0, logo: d.logo || null };
+            names[d.name].count++;
+        });
+
+        var sorted = Object.keys(names).sort(function (a, b) {
+            return names[b].count - names[a].count;
+        });
+
+        if (sorted.length === 0) {
+            sponsorGrid.innerHTML = '<div class="sponsor-empty">Ingen sponsorer ennå - bli den første!</div>';
+            return;
+        }
+
+        sorted.forEach(function (name) {
+            var info = names[name];
+            var card = document.createElement('div');
+            card.className = 'sponsor-card';
+
+            if (info.logo) {
+                var img = document.createElement('img');
+                img.src = info.logo;
+                img.alt = name;
+                img.className = 'sponsor-card-logo';
+                card.appendChild(img);
+            }
+
+            var nameEl = document.createElement('div');
+            nameEl.className = 'sponsor-card-name';
+            nameEl.textContent = name;
+            card.appendChild(nameEl);
+
+            var tilesEl = document.createElement('div');
+            tilesEl.className = 'sponsor-card-tiles';
+            tilesEl.textContent = info.count + (info.count === 1 ? ' flis' : ' fliser');
+            card.appendChild(tilesEl);
+
+            sponsorGrid.appendChild(card);
+        });
+    }
+
+    // ===== Tile click =====
 
     function onTileClick(row, col) {
+        if (!isAdmin()) return;
         if (multiSelectMode) {
             toggleTileSelection(row, col);
         } else {
@@ -262,7 +411,7 @@
         }
     }
 
-    // ===== Multi-select mode =====
+    // ===== Multi-select =====
 
     function enterMultiSelectMode() {
         multiSelectMode = true;
@@ -277,27 +426,16 @@
         selectedTiles = [];
         multiselectBtn.classList.remove('active');
         selectionBar.style.display = 'none';
-
-        // Remove selection styling
-        var selected = gridEl.querySelectorAll('.selected');
-        for (var i = 0; i < selected.length; i++) {
-            selected[i].classList.remove('selected');
-        }
+        var sel = gridEl.querySelectorAll('.selected');
+        for (var i = 0; i < sel.length; i++) sel[i].classList.remove('selected');
     }
 
     function toggleTileSelection(row, col) {
         var key = tileKey(row, col);
         var idx = selectedTiles.indexOf(key);
-        var tileIndex = row * COLS + col;
-        var tileEl = gridEl.children[tileIndex];
-
-        if (idx >= 0) {
-            selectedTiles.splice(idx, 1);
-            if (tileEl) tileEl.classList.remove('selected');
-        } else {
-            selectedTiles.push(key);
-            if (tileEl) tileEl.classList.add('selected');
-        }
+        var el = gridEl.children[row * COLS + col];
+        if (idx >= 0) { selectedTiles.splice(idx, 1); if (el) el.classList.remove('selected'); }
+        else { selectedTiles.push(key); if (el) el.classList.add('selected'); }
         updateSelectionCount();
     }
 
@@ -309,15 +447,12 @@
     // ===== Modal =====
 
     function openModal(row, col) {
-        currentTile = { row: row, col: col, keys: [tileKey(row, col)] };
-        var key = tileKey(row, col);
-        var data = getTileData(key);
-
+        currentTile = { keys: [tileKey(row, col)] };
+        var data = getTileData(tileKey(row, col));
         modalTitle.textContent = 'Flis (rad ' + (row + 1) + ', kolonne ' + (col + 1) + ')';
         nameInput.value = data ? data.name : '';
         currentLogo = data ? (data.logo || null) : null;
         updateLogoPreview();
-
         clearBtn.style.display = data ? 'block' : 'none';
         modalOverlay.classList.add('active');
         nameInput.focus();
@@ -325,17 +460,13 @@
 
     function openMultiModal() {
         if (selectedTiles.length === 0) return;
-
         currentTile = { keys: selectedTiles.slice() };
         modalTitle.textContent = selectedTiles.length + ' fliser valgt (bedrift/sponsor)';
-
-        // Check if all selected tiles already have the same data
-        var firstData = getTileData(selectedTiles[0]);
-        nameInput.value = firstData ? firstData.name : '';
-        currentLogo = firstData ? (firstData.logo || null) : null;
+        var first = getTileData(selectedTiles[0]);
+        nameInput.value = first ? first.name : '';
+        currentLogo = first ? (first.logo || null) : null;
         updateLogoPreview();
-
-        clearBtn.style.display = firstData ? 'block' : 'none';
+        clearBtn.style.display = first ? 'block' : 'none';
         modalOverlay.classList.add('active');
         nameInput.focus();
     }
@@ -356,76 +487,38 @@
         currentLogo = null;
         nameInput.value = '';
         logoInput.value = '';
-        updateLogoPreview();
     }
 
     function saveTile() {
         if (!currentTile) return;
-
         var name = nameInput.value.trim();
         var keys = currentTile.keys;
-        var groupId = null;
-
-        // Generate group ID if multiple tiles
-        if (keys.length > 1) {
-            groupId = 'g-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
-        }
+        var groupId = keys.length > 1 ? 'g-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5) : null;
 
         if (name) {
-            keys.forEach(function (key) {
-                setTileData(key, name, currentLogo, groupId);
-            });
+            keys.forEach(function (k) { setTileData(k, name, currentLogo, groupId); });
         } else {
-            // No name = remove tiles
-            keys.forEach(function (key) {
-                delete tiles[key];
-            });
+            keys.forEach(function (k) { delete tiles[k]; });
         }
 
-        saveData();
-        buildGrid();
-        updateStats();
-        restoreHighlights();
-        closeModal();
-
-        if (multiSelectMode) {
-            exitMultiSelectMode();
-        }
+        saveData(); buildGrid(); updateStats(); renderSponsorList(); restoreHighlights(); closeModal();
+        if (multiSelectMode) exitMultiSelectMode();
     }
 
     function clearTile() {
         if (!currentTile) return;
-
-        var keys = currentTile.keys;
-
-        // If tile belongs to a group, clear all tiles in the group
-        var firstData = getTileData(keys[0]);
-        if (firstData && firstData.group) {
-            var groupId = firstData.group;
-            Object.keys(tiles).forEach(function (key) {
-                var d = getTileData(key);
-                if (d && d.group === groupId) {
-                    delete tiles[key];
-                }
-            });
+        var first = getTileData(currentTile.keys[0]);
+        if (first && first.group) {
+            var gid = first.group;
+            Object.keys(tiles).forEach(function (k) { var d = getTileData(k); if (d && d.group === gid) delete tiles[k]; });
         } else {
-            keys.forEach(function (key) {
-                delete tiles[key];
-            });
+            currentTile.keys.forEach(function (k) { delete tiles[k]; });
         }
-
-        saveData();
-        buildGrid();
-        updateStats();
-        restoreHighlights();
-        closeModal();
-
-        if (multiSelectMode) {
-            exitMultiSelectMode();
-        }
+        saveData(); buildGrid(); updateStats(); renderSponsorList(); restoreHighlights(); closeModal();
+        if (multiSelectMode) exitMultiSelectMode();
     }
 
-    // ===== Background image =====
+    // ===== Background =====
 
     function loadBackground() {
         if (settings.backgroundImage) {
@@ -435,11 +528,10 @@
     }
 
     function setBackgroundImage(file) {
-        // Resize for background - allow larger (800px)
-        resizeImage(file, 800, function (dataUrl) {
-            settings.backgroundImage = dataUrl;
+        resizeImage(file, 800, function (url) {
+            settings.backgroundImage = url;
             saveSettings();
-            fieldSurroundings.style.backgroundImage = 'url(' + dataUrl + ')';
+            fieldSurroundings.style.backgroundImage = 'url(' + url + ')';
             bgClearBtn.style.display = 'inline-flex';
         });
     }
@@ -455,50 +547,32 @@
 
     function searchTiles() {
         clearHighlights();
-
-        var query = searchInput.value.trim().toLowerCase();
-        if (!query) return;
-
+        var q = searchInput.value.trim().toLowerCase();
+        if (!q) return;
         highlightedTiles = [];
-
         Object.keys(tiles).forEach(function (key) {
-            var data = getTileData(key);
-            if (data && data.name.toLowerCase().indexOf(query) >= 0) {
+            var d = getTileData(key);
+            if (d && d.name.toLowerCase().indexOf(q) >= 0) {
                 highlightedTiles.push(key);
-                var parts = key.split('-');
-                var row = parseInt(parts[0]);
-                var col = parseInt(parts[1]);
-                var index = row * COLS + col;
-                var tileEl = gridEl.children[index];
-                if (tileEl) {
-                    tileEl.classList.add('highlight');
-                }
+                var p = key.split('-');
+                var el = gridEl.children[+p[0] * COLS + +p[1]];
+                if (el) el.classList.add('highlight');
             }
         });
-
-        if (highlightedTiles.length === 0) {
-            alert('Ingen fliser funnet med navnet "' + searchInput.value.trim() + '"');
-        }
+        if (highlightedTiles.length === 0) alert('Ingen fliser funnet med "' + searchInput.value.trim() + '"');
     }
 
     function clearHighlights() {
-        var highlighted = gridEl.querySelectorAll('.highlight');
-        for (var i = 0; i < highlighted.length; i++) {
-            highlighted[i].classList.remove('highlight');
-        }
+        var hl = gridEl.querySelectorAll('.highlight');
+        for (var i = 0; i < hl.length; i++) hl[i].classList.remove('highlight');
         highlightedTiles = [];
     }
 
     function restoreHighlights() {
         highlightedTiles.forEach(function (key) {
-            var parts = key.split('-');
-            var row = parseInt(parts[0]);
-            var col = parseInt(parts[1]);
-            var index = row * COLS + col;
-            var tileEl = gridEl.children[index];
-            if (tileEl && tiles[key]) {
-                tileEl.classList.add('highlight');
-            }
+            var p = key.split('-');
+            var el = gridEl.children[+p[0] * COLS + +p[1]];
+            if (el && tiles[key]) el.classList.add('highlight');
         });
     }
 
@@ -506,22 +580,14 @@
 
     function exportToExcel() {
         var data = [];
-        for (var row = 0; row < ROWS; row++) {
-            var rowData = [];
-            for (var col = 0; col < COLS; col++) {
-                var key = tileKey(row, col);
-                var d = getTileData(key);
-                rowData.push(d ? d.name : '');
-            }
-            data.push(rowData);
+        for (var r = 0; r < ROWS; r++) {
+            var row = [];
+            for (var c = 0; c < COLS; c++) { var d = getTileData(tileKey(r, c)); row.push(d ? d.name : ''); }
+            data.push(row);
         }
-
         var ws = XLSX.utils.aoa_to_sheet(data);
         ws['!cols'] = [];
-        for (var c = 0; c < COLS; c++) {
-            ws['!cols'].push({ wch: 14 });
-        }
-
+        for (var i = 0; i < COLS; i++) ws['!cols'].push({ wch: 14 });
         var wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Fotballbane');
         XLSX.writeFile(wb, 'nidelv-il-fliser.xlsx');
@@ -531,44 +597,33 @@
         var reader = new FileReader();
         reader.onload = function (e) {
             try {
-                var data = new Uint8Array(e.target.result);
-                var wb = XLSX.read(data, { type: 'array' });
-                var ws = wb.Sheets[wb.SheetNames[0]];
-                var jsonData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-
-                // Preserve tiles with logos/groups, update names from Excel
+                var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                var json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
                 var newTiles = {};
-                var maxRows = Math.min(jsonData.length, ROWS);
-                for (var row = 0; row < maxRows; row++) {
-                    var rowData = jsonData[row];
-                    if (!rowData) continue;
-                    var maxCols = Math.min(rowData.length, COLS);
-                    for (var col = 0; col < maxCols; col++) {
-                        var value = String(rowData[col] || '').trim();
-                        if (value) {
-                            var key = tileKey(row, col);
-                            var existing = getTileData(key);
-                            if (existing && existing.logo) {
-                                // Keep logo and group, update name
-                                newTiles[key] = { name: value, logo: existing.logo };
-                                if (existing.group) newTiles[key].group = existing.group;
+                var maxR = Math.min(json.length, ROWS);
+                for (var r = 0; r < maxR; r++) {
+                    if (!json[r]) continue;
+                    var maxC = Math.min(json[r].length, COLS);
+                    for (var c = 0; c < maxC; c++) {
+                        var v = String(json[r][c] || '').trim();
+                        if (v) {
+                            var k = tileKey(r, c);
+                            var ex = getTileData(k);
+                            if (ex && ex.logo) {
+                                newTiles[k] = { name: v, logo: ex.logo };
+                                if (ex.group) newTiles[k].group = ex.group;
                             } else {
-                                newTiles[key] = { name: value };
+                                newTiles[k] = { name: v };
                             }
                         }
                     }
                 }
-
                 tiles = newTiles;
-                saveData();
-                buildGrid();
-                updateStats();
-                clearHighlights();
-
-                alert('Importert! ' + Object.keys(tiles).length + ' fliser med navn ble lastet inn.');
+                saveData(); buildGrid(); updateStats(); renderSponsorList(); clearHighlights();
+                alert('Importert! ' + Object.keys(tiles).length + ' fliser lastet inn.');
             } catch (err) {
-                alert('Kunne ikke lese filen. Sjekk at det er en gyldig Excel-fil (.xlsx).');
-                console.error('Import error:', err);
+                alert('Kunne ikke lese filen.');
+                console.error(err);
             }
         };
         reader.readAsArrayBuffer(file);
@@ -576,101 +631,73 @@
 
     // ===== Event listeners =====
 
+    // Tile modal
     saveBtn.addEventListener('click', saveTile);
     cancelBtn.addEventListener('click', closeModal);
     clearBtn.addEventListener('click', clearTile);
     closeBtn.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', function (e) { if (e.target === modalOverlay) closeModal(); });
+    nameInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') saveTile(); if (e.key === 'Escape') closeModal(); });
 
-    modalOverlay.addEventListener('click', function (e) {
-        if (e.target === modalOverlay) closeModal();
-    });
-
-    nameInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') saveTile();
-        if (e.key === 'Escape') closeModal();
-    });
-
-    // Logo upload in modal
     logoInput.addEventListener('change', function (e) {
-        var file = e.target.files[0];
-        if (!file) return;
-        resizeImage(file, MAX_LOGO_SIZE, function (dataUrl) {
-            currentLogo = dataUrl;
-            updateLogoPreview();
-        });
+        var f = e.target.files[0];
+        if (!f) return;
+        resizeImage(f, MAX_LOGO_SIZE, function (url) { currentLogo = url; updateLogoPreview(); });
         logoInput.value = '';
     });
-
-    removeLogoBtn.addEventListener('click', function () {
-        currentLogo = null;
-        updateLogoPreview();
-    });
+    removeLogoBtn.addEventListener('click', function () { currentLogo = null; updateLogoPreview(); });
 
     // Multi-select
-    multiselectBtn.addEventListener('click', function () {
-        if (multiSelectMode) {
-            exitMultiSelectMode();
-        } else {
-            enterMultiSelectMode();
-        }
-    });
+    multiselectBtn.addEventListener('click', function () { multiSelectMode ? exitMultiSelectMode() : enterMultiSelectMode(); });
+    assignBtn.addEventListener('click', openMultiModal);
+    cancelSelectBtn.addEventListener('click', exitMultiSelectMode);
 
-    assignBtn.addEventListener('click', function () {
-        openMultiModal();
-    });
-
-    cancelSelectBtn.addEventListener('click', function () {
-        exitMultiSelectMode();
-    });
-
-    // Background image
-    bgInput.addEventListener('change', function (e) {
-        var file = e.target.files[0];
-        if (file) {
-            setBackgroundImage(file);
-            bgInput.value = '';
-        }
-    });
-
+    // Background
+    bgInput.addEventListener('change', function (e) { var f = e.target.files[0]; if (f) { setBackgroundImage(f); bgInput.value = ''; } });
     bgClearBtn.addEventListener('click', clearBackground);
 
     // Excel
     exportBtn.addEventListener('click', exportToExcel);
-
-    importInput.addEventListener('change', function (e) {
-        var file = e.target.files[0];
-        if (file) {
-            importFromExcel(file);
-            importInput.value = '';
-        }
-    });
+    importInput.addEventListener('change', function (e) { var f = e.target.files[0]; if (f) { importFromExcel(f); importInput.value = ''; } });
 
     // Search
     searchBtn.addEventListener('click', searchTiles);
+    searchInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') searchTiles(); });
+    searchInput.addEventListener('input', function () { if (!searchInput.value.trim()) clearHighlights(); });
 
-    searchInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') searchTiles();
-    });
+    // Admin login
+    adminBtn.addEventListener('click', openLoginModal);
+    loginSubmitBtn.addEventListener('click', handleLogin);
+    loginCancelBtn.addEventListener('click', closeLoginModal);
+    loginCloseBtn.addEventListener('click', closeLoginModal);
+    loginOverlay.addEventListener('click', function (e) { if (e.target === loginOverlay) closeLoginModal(); });
+    adminPassword.addEventListener('keydown', function (e) { if (e.key === 'Enter') handleLogin(); if (e.key === 'Escape') closeLoginModal(); });
+    logoutBtn.addEventListener('click', function () { setAdminMode(false); });
 
-    searchInput.addEventListener('input', function () {
-        if (!searchInput.value.trim()) clearHighlights();
-    });
+    // Settings
+    settingsBtn.addEventListener('click', openSettingsModal);
+    settingsSaveBtn.addEventListener('click', saveSettingsForm);
+    settingsCancelBtn.addEventListener('click', closeSettingsModal);
+    settingsCloseBtn.addEventListener('click', closeSettingsModal);
+    settingsOverlay.addEventListener('click', function (e) { if (e.target === settingsOverlay) closeSettingsModal(); });
 
     // Global keyboard
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
-            if (modalOverlay.classList.contains('active')) {
-                closeModal();
-            } else if (multiSelectMode) {
-                exitMultiSelectMode();
-            }
+            if (modalOverlay.classList.contains('active')) closeModal();
+            else if (loginOverlay.classList.contains('active')) closeLoginModal();
+            else if (settingsOverlay.classList.contains('active')) closeSettingsModal();
+            else if (multiSelectMode) exitMultiSelectMode();
         }
     });
 
-    // ===== Initialize =====
+    // ===== Init =====
 
     loadData();
+    if (isAdmin()) setAdminMode(true);
+    else setAdminMode(false);
     buildGrid();
     updateStats();
+    renderSponsorList();
     loadBackground();
 })();
