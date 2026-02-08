@@ -216,6 +216,61 @@ main {
     transition: width 0.5s ease;
 }
 
+/* === Fundraising summary === */
+.fundraising-summary {
+    background: linear-gradient(135deg, rgba(26, 58, 138, 0.3), rgba(212, 43, 43, 0.15));
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 0.8rem;
+    text-align: center;
+}
+
+.fundraising-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    margin-bottom: 0.8rem;
+}
+
+.fundraising-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 500;
+}
+
+.fundraising-amount {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--sold-color);
+    line-height: 1.1;
+}
+
+.fundraising-goal-text {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 400;
+}
+
+.fundraising-bar-container {
+    width: 100%;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.fundraising-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--nidelv-red), var(--sold-color));
+    border-radius: 6px;
+    transition: width 0.5s ease;
+    min-width: 0;
+}
+
 /* === Toolbar === */
 .toolbar {
     display: flex;
@@ -911,7 +966,8 @@ footer {
     .toolbar-divider { display: none; }
     .legend { gap: 0.8rem; font-size: 0.75rem; }
     .selection-bar { flex-direction: column; text-align: center; }
-    .about, .sponsor-list, .buy-info { padding: 1rem 1.5rem; }
+    .about, .sponsor-list, .buy-info, .fundraising-summary { padding: 1rem 1.5rem; }
+    .fundraising-amount { font-size: 1.6rem; }
     .field-surroundings { padding: 10px; }
     .sponsor-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
     .toast-container { left: 1rem; right: 1rem; bottom: 1rem; }

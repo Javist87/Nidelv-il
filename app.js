@@ -57,6 +57,11 @@
     var legendPrice = document.getElementById('legend-price');
     var toastContainer = document.getElementById('toast-container');
 
+    // Fundraising DOM
+    var fundraisingAmount = document.getElementById('fundraising-amount');
+    var fundraisingGoalText = document.getElementById('fundraising-goal-text');
+    var fundraisingBar = document.getElementById('fundraising-bar');
+
     // Zoom DOM
     var zoomInBtn = document.getElementById('zoom-in-btn');
     var zoomOutBtn = document.getElementById('zoom-out-btn');
@@ -90,6 +95,7 @@
     var priceCatNameInput = document.getElementById('price-cat-name');
     var priceCatPriceInput = document.getElementById('price-cat-price');
     var addPriceCatBtn = document.getElementById('add-price-cat-btn');
+    var fundraisingGoalInput = document.getElementById('fundraising-goal-input');
     var newPasswordInput = document.getElementById('new-password');
     var confirmPasswordInput = document.getElementById('confirm-password');
 
@@ -221,6 +227,7 @@
     // ===== Settings =====
 
     function openSettingsModal() {
+        fundraisingGoalInput.value = settings.fundraisingGoal || '';
         newPasswordInput.value = '';
         confirmPasswordInput.value = '';
         renderPriceCategories();
@@ -232,6 +239,13 @@
     }
 
     function saveSettingsForm() {
+        var goalVal = parseInt(fundraisingGoalInput.value);
+        if (!isNaN(goalVal) && goalVal > 0) {
+            settings.fundraisingGoal = goalVal;
+        } else {
+            delete settings.fundraisingGoal;
+        }
+
         var newPw = newPasswordInput.value;
         var confirmPw = confirmPasswordInput.value;
         if (newPw) {
@@ -470,7 +484,19 @@
         availableCountEl.textContent = total - soldCount;
         progressEl.textContent = percent + '%';
         progressBarEl.style.width = percent + '%';
-        raisedAmountEl.textContent = totalRaised > 0 ? 'kr ' + totalRaised.toLocaleString('nb-NO') : '-';
+        raisedAmountEl.textContent = 'kr ' + totalRaised.toLocaleString('nb-NO');
+
+        // Fundraising summary
+        fundraisingAmount.textContent = 'kr ' + totalRaised.toLocaleString('nb-NO');
+        var goal = settings.fundraisingGoal || 0;
+        if (goal > 0) {
+            var goalPercent = Math.min(100, Math.round((totalRaised / goal) * 100));
+            fundraisingGoalText.textContent = 'av kr ' + goal.toLocaleString('nb-NO') + ' (' + goalPercent + '%)';
+            fundraisingBar.style.width = goalPercent + '%';
+        } else {
+            fundraisingGoalText.textContent = soldCount + ' av ' + total + ' fliser solgt';
+            fundraisingBar.style.width = percent + '%';
+        }
     }
 
     function updatePriceDisplay() {

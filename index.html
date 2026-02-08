@@ -54,6 +54,18 @@
             <div class="progress-bar" id="progress-bar" style="width:0%"></div>
         </div>
 
+        <!-- Fundraising summary -->
+        <section class="fundraising-summary" id="fundraising-summary">
+            <div class="fundraising-main">
+                <span class="fundraising-label">Totalt innsamlet</span>
+                <span class="fundraising-amount" id="fundraising-amount">kr 0</span>
+                <span class="fundraising-goal-text" id="fundraising-goal-text"></span>
+            </div>
+            <div class="fundraising-bar-container">
+                <div class="fundraising-bar" id="fundraising-bar" style="width:0%"></div>
+            </div>
+        </section>
+
         <!-- Admin-only toolbar -->
         <section class="toolbar admin-only" id="toolbar">
             <div class="toolbar-left">
@@ -247,6 +259,8 @@
                     <input type="number" id="price-cat-price" placeholder="Pris (kr)" min="0" step="50" class="price-cat-input">
                     <button class="btn btn-primary btn-small" id="add-price-cat-btn" type="button">Legg til</button>
                 </div>
+                <label for="fundraising-goal-input" class="logo-label">Innsamlingsmål (kr):</label>
+                <input type="number" id="fundraising-goal-input" placeholder="F.eks. 450000" min="0" step="1000">
                 <label for="new-password" class="logo-label">Endre admin-passord:</label>
                 <input type="password" id="new-password" placeholder="Nytt passord (min 4 tegn)">
                 <input type="password" id="confirm-password" placeholder="Bekreft nytt passord" style="margin-top:0.5rem">
