@@ -20,12 +20,16 @@
     --text-light: #f5f5f5;
     --text-dark: #1a1a1a;
     --modal-bg: #ffffff;
-    --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    --bg-main: #f5f7fa;
+    --bg-card: #ffffff;
+    --border-color: #e0e4ea;
+    --text-muted: #6b7280;
 }
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--nidelv-dark);
+    background: var(--bg-main);
     color: var(--text-dark);
     min-height: 100vh;
     display: flex;
@@ -47,7 +51,7 @@ header {
     color: var(--text-light);
     padding: 1rem 2rem;
     text-align: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 }
 
 .header-top {
@@ -136,9 +140,11 @@ main {
     flex-wrap: wrap;
     gap: 1rem;
     margin-bottom: 0.5rem;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 1rem 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .stats {
@@ -156,12 +162,12 @@ main {
 .stat-number {
     font-size: 1.4rem;
     font-weight: 700;
-    color: var(--text-light);
+    color: var(--nidelv-blue);
 }
 
 .stat-label {
     font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -173,16 +179,16 @@ main {
 
 .search-container input {
     padding: 0.5rem 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-light);
+    background: var(--bg-main);
+    color: var(--text-dark);
     font-size: 0.9rem;
     width: 200px;
 }
 
-.search-container input::placeholder { color: rgba(255, 255, 255, 0.5); }
-.search-container input:focus { outline: none; border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.15); }
+.search-container input::placeholder { color: #aaa; }
+.search-container input:focus { outline: none; border-color: var(--nidelv-blue); background: #fff; }
 
 .search-container button {
     padding: 0.5rem 1rem;
@@ -203,7 +209,7 @@ main {
 .progress-bar-container {
     width: 100%;
     height: 8px;
-    background: rgba(255,255,255,0.1);
+    background: var(--border-color);
     border-radius: 4px;
     margin-bottom: 0.8rem;
     overflow: hidden;
@@ -218,12 +224,13 @@ main {
 
 /* === Fundraising summary === */
 .fundraising-summary {
-    background: linear-gradient(135deg, rgba(26, 58, 138, 0.3), rgba(212, 43, 43, 0.15));
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 1.2rem 1.5rem;
     margin-bottom: 0.8rem;
     text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .fundraising-main {
@@ -238,34 +245,34 @@ main {
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-muted);
     font-weight: 500;
 }
 
 .fundraising-amount {
     font-size: 2.2rem;
     font-weight: 700;
-    color: var(--sold-color);
+    color: var(--nidelv-blue);
     line-height: 1.1;
 }
 
 .fundraising-goal-text {
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-muted);
     font-weight: 400;
 }
 
 .fundraising-bar-container {
     width: 100%;
     height: 12px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--border-color);
     border-radius: 6px;
     overflow: hidden;
 }
 
 .fundraising-bar {
     height: 100%;
-    background: linear-gradient(90deg, var(--nidelv-red), var(--sold-color));
+    background: linear-gradient(90deg, var(--nidelv-blue), var(--nidelv-red));
     border-radius: 6px;
     transition: width 0.5s ease;
     min-width: 0;
@@ -279,9 +286,11 @@ main {
     flex-wrap: wrap;
     gap: 0.6rem;
     margin-bottom: 0.8rem;
-    background: rgba(255, 255, 255, 0.07);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 0.6rem 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .toolbar-left, .toolbar-right {
@@ -294,7 +303,7 @@ main {
 .toolbar-divider {
     width: 1px;
     height: 24px;
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--border-color);
 }
 
 .btn-tool {
@@ -302,10 +311,10 @@ main {
     align-items: center;
     gap: 0.4rem;
     padding: 0.45rem 0.8rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-light);
+    background: var(--bg-main);
+    color: var(--text-dark);
     cursor: pointer;
     font-size: 0.8rem;
     font-weight: 500;
@@ -313,10 +322,10 @@ main {
     font-family: inherit;
 }
 
-.btn-tool:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.35); }
-.btn-tool.active { background: rgba(168,85,247,0.4); border-color: rgba(168,85,247,0.7); }
-.btn-bg-clear { font-size: 0.75rem; padding: 0.35rem 0.6rem; background: rgba(231,76,60,0.3); border-color: rgba(231,76,60,0.5); }
-.btn-bg-clear:hover { background: rgba(231,76,60,0.5) !important; }
+.btn-tool:hover { background: #e8ecf2; border-color: #ccd0d8; }
+.btn-tool.active { background: rgba(168,85,247,0.15); border-color: rgba(168,85,247,0.5); color: #7c3aed; }
+.btn-bg-clear { font-size: 0.75rem; padding: 0.35rem 0.6rem; background: rgba(212,43,43,0.08); border-color: rgba(212,43,43,0.3); color: var(--nidelv-red); }
+.btn-bg-clear:hover { background: rgba(212,43,43,0.15) !important; }
 
 /* === Selection bar === */
 .selection-bar {
@@ -325,11 +334,11 @@ main {
     align-items: center;
     gap: 1rem;
     margin-bottom: 0.8rem;
-    background: rgba(168, 85, 247, 0.2);
-    border: 1px solid rgba(168, 85, 247, 0.4);
+    background: rgba(168, 85, 247, 0.08);
+    border: 1px solid rgba(168, 85, 247, 0.3);
     border-radius: 10px;
     padding: 0.8rem 1.5rem;
-    color: var(--text-light);
+    color: var(--text-dark);
     font-weight: 500;
 }
 
@@ -342,7 +351,7 @@ main {
 .selection-hint {
     font-size: 0.75rem;
     font-weight: 400;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-muted);
     font-style: italic;
 }
 
@@ -362,7 +371,7 @@ main {
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--text-muted);
     font-size: 0.8rem;
 }
 
@@ -370,7 +379,7 @@ main {
     width: 14px;
     height: 14px;
     border-radius: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid var(--border-color);
 }
 
 .legend-available { background: var(--grass-dark); }
@@ -380,10 +389,10 @@ main {
 
 .legend-price {
     font-size: 0.8rem;
-    color: var(--sold-color);
+    color: var(--nidelv-blue);
     font-weight: 600;
     padding-left: 0.8rem;
-    border-left: 1px solid rgba(255,255,255,0.2);
+    border-left: 1px solid var(--border-color);
 }
 
 /* === Field === */
@@ -395,6 +404,7 @@ main {
 .field-scroll {
     overflow: auto;
     border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
 }
 
 .field-surroundings {
@@ -554,10 +564,12 @@ main {
 /* === Sponsor list === */
 .sponsor-list {
     margin-top: 2rem;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 1.5rem 2rem;
-    color: var(--text-light);
+    color: var(--text-dark);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .sponsor-list h2 {
@@ -565,6 +577,7 @@ main {
     margin-bottom: 1rem;
     font-weight: 600;
     text-align: center;
+    color: var(--nidelv-dark);
 }
 
 .sponsor-grid {
@@ -574,8 +587,8 @@ main {
 }
 
 .sponsor-card {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 0.8rem;
     text-align: center;
@@ -584,14 +597,15 @@ main {
 }
 
 .sponsor-card:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.25);
+    background: #edf0f5;
+    border-color: #ccd0d8;
     transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .sponsor-card.active {
     border-color: var(--highlight-color);
-    background: rgba(255, 107, 53, 0.15);
+    background: rgba(255, 107, 53, 0.08);
 }
 
 .sponsor-card-logo {
@@ -605,18 +619,18 @@ main {
 .sponsor-card-name {
     font-size: 0.85rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-dark);
 }
 
 .sponsor-card-tiles {
     font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-muted);
     margin-top: 0.2rem;
 }
 
 .sponsor-empty {
     text-align: center;
-    color: rgba(255, 255, 255, 0.4);
+    color: #bbb;
     font-style: italic;
     padding: 1rem;
     grid-column: 1 / -1;
@@ -625,11 +639,11 @@ main {
 /* === Buy info === */
 .buy-info {
     margin-top: 1.5rem;
-    background: linear-gradient(135deg, rgba(230,168,23,0.15), rgba(59,130,246,0.1));
-    border: 1px solid rgba(230,168,23,0.3);
+    background: linear-gradient(135deg, rgba(26,58,138,0.06), rgba(212,43,43,0.04));
+    border: 1px solid rgba(26,58,138,0.15);
     border-radius: 10px;
     padding: 1.5rem 2rem;
-    color: var(--text-light);
+    color: var(--text-dark);
     text-align: center;
 }
 
@@ -637,11 +651,12 @@ main {
     font-size: 1.3rem;
     margin-bottom: 0.5rem;
     font-weight: 700;
+    color: var(--nidelv-dark);
 }
 
 .buy-info p {
     font-size: 0.95rem;
-    opacity: 0.85;
+    color: var(--text-muted);
     margin-bottom: 1rem;
     line-height: 1.5;
 }
@@ -659,8 +674,8 @@ main {
     gap: 0.4rem;
     padding: 0.7rem 1.5rem;
     border-radius: 8px;
-    background: var(--sold-color);
-    color: var(--text-dark);
+    background: var(--nidelv-red);
+    color: var(--text-light);
     text-decoration: none;
     font-weight: 600;
     font-size: 0.95rem;
@@ -668,15 +683,15 @@ main {
 }
 
 .buy-btn:hover {
-    background: #f0b820;
+    background: #b82525;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(230,168,23,0.4);
+    box-shadow: 0 4px 12px rgba(212,43,43,0.3);
 }
 
 /* === Modal === */
 .modal-overlay {
     display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6); z-index: 1000;
+    background: rgba(0, 0, 0, 0.4); z-index: 1000;
     justify-content: center; align-items: center; backdrop-filter: blur(3px);
 }
 
@@ -685,7 +700,7 @@ main {
 .modal {
     background: var(--modal-bg); border-radius: 12px; padding: 0;
     width: 90%; max-width: 440px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); overflow: hidden;
 }
 
 .modal-compact {
@@ -902,14 +917,13 @@ main {
 }
 
 .toast {
-    background: rgba(15, 30, 74, 0.95);
+    background: var(--nidelv-dark);
     color: var(--text-light);
     padding: 0.8rem 1.2rem;
     border-radius: 8px;
     font-size: 0.85rem;
     font-weight: 500;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
     pointer-events: auto;
     animation: toastIn 0.3s ease;
     max-width: 350px;
@@ -937,19 +951,21 @@ main {
 /* === About === */
 .about {
     margin-top: 1.5rem;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 1.5rem 2rem;
-    color: var(--text-light);
+    color: var(--text-dark);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-.about h2 { font-size: 1.2rem; margin-bottom: 0.7rem; font-weight: 600; }
-.about p { font-size: 0.95rem; line-height: 1.6; opacity: 0.85; }
+.about h2 { font-size: 1.2rem; margin-bottom: 0.7rem; font-weight: 600; color: var(--nidelv-dark); }
+.about p { font-size: 0.95rem; line-height: 1.6; color: var(--text-muted); }
 
 /* === Footer === */
 footer {
     text-align: center; padding: 1.5rem;
-    color: rgba(255, 255, 255, 0.4); font-size: 0.8rem;
+    color: var(--text-muted); font-size: 0.8rem;
 }
 
 /* === Responsive === */
