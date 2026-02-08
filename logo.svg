@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140">
+  <defs>
+    <clipPath id="oval"><ellipse cx="100" cy="70" rx="96" ry="66"/></clipPath>
+  </defs>
+  <!-- Oval background -->
+  <ellipse cx="100" cy="70" rx="98" ry="68" fill="#fff" stroke="#ccc" stroke-width="1.5"/>
+  <!-- Norwegian flags left -->
+  <g transform="translate(28,22) rotate(-15)">
+    <rect x="0" y="0" width="36" height="26" rx="2" fill="#BA0C2F"/>
+    <rect x="11" y="0" width="6" height="26" fill="#fff"/>
+    <rect x="0" y="10" width="36" height="6" fill="#fff"/>
+    <rect x="12.5" y="0" width="3" height="26" fill="#00205B"/>
+    <rect x="0" y="11.5" width="36" height="3" fill="#00205B"/>
+  </g>
+  <g transform="translate(48,16) rotate(-5)">
+    <rect x="0" y="0" width="36" height="26" rx="2" fill="#BA0C2F"/>
+    <rect x="11" y="0" width="6" height="26" fill="#fff"/>
+    <rect x="0" y="10" width="36" height="6" fill="#fff"/>
+    <rect x="12.5" y="0" width="3" height="26" fill="#00205B"/>
+    <rect x="0" y="11.5" width="36" height="3" fill="#00205B"/>
+  </g>
+  <!-- Norwegian flags right -->
+  <g transform="translate(136,22) rotate(15)">
+    <rect x="0" y="0" width="36" height="26" rx="2" fill="#BA0C2F"/>
+    <rect x="11" y="0" width="6" height="26" fill="#fff"/>
+    <rect x="0" y="10" width="36" height="6" fill="#fff"/>
+    <rect x="12.5" y="0" width="3" height="26" fill="#00205B"/>
+    <rect x="0" y="11.5" width="36" height="3" fill="#00205B"/>
+  </g>
+  <g transform="translate(116,16) rotate(5)">
+    <rect x="0" y="0" width="36" height="26" rx="2" fill="#BA0C2F"/>
+    <rect x="11" y="0" width="6" height="26" fill="#fff"/>
+    <rect x="0" y="10" width="36" height="6" fill="#fff"/>
+    <rect x="12.5" y="0" width="3" height="26" fill="#00205B"/>
+    <rect x="0" y="11.5" width="36" height="3" fill="#00205B"/>
+  </g>
+  <!-- NI letters -->
+  <text x="100" y="78" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="52" fill="#BA0C2F" letter-spacing="-2">NI</text>
+  <!-- NIDELV text -->
+  <text x="100" y="115" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="28" fill="#00205B" letter-spacing="3">NIDELV</text>
+</svg>
