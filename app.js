@@ -86,9 +86,15 @@
     var settingsCloseBtn = document.getElementById('settings-close-btn');
     var settingsSaveBtn = document.getElementById('settings-save-btn');
     var settingsCancelBtn = document.getElementById('settings-cancel-btn');
-    var tilePriceInput = document.getElementById('tile-price-input');
+    var priceCatList = document.getElementById('price-categories-list');
+    var priceCatNameInput = document.getElementById('price-cat-name');
+    var priceCatPriceInput = document.getElementById('price-cat-price');
+    var addPriceCatBtn = document.getElementById('add-price-cat-btn');
     var newPasswordInput = document.getElementById('new-password');
     var confirmPasswordInput = document.getElementById('confirm-password');
+
+    // Tile price select
+    var tilePriceSelect = document.getElementById('tile-price-select');
 
     // ===== Toast notifications =====
 
@@ -114,10 +120,11 @@
         return val;
     }
 
-    function setTileData(key, name, logo, group) {
+    function setTileData(key, name, logo, group, price) {
         var data = { name: name };
         if (logo) data.logo = logo;
         if (group) data.group = group;
+        if (price != null && price > 0) data.price = price;
         tiles[key] = data;
     }
 
@@ -214,9 +221,9 @@
     // ===== Settings =====
 
     function openSettingsModal() {
-        tilePriceInput.value = settings.tilePrice || '';
         newPasswordInput.value = '';
         confirmPasswordInput.value = '';
+        renderPriceCategories();
         settingsOverlay.classList.add('active');
     }
 
@@ -225,13 +232,6 @@
     }
 
     function saveSettingsForm() {
-        var price = parseInt(tilePriceInput.value);
-        if (!isNaN(price) && price >= 0) {
-            settings.tilePrice = price;
-        } else {
-            delete settings.tilePrice;
-        }
-
         var newPw = newPasswordInput.value;
         var confirmPw = confirmPasswordInput.value;
         if (newPw) {
@@ -251,6 +251,84 @@
         updatePriceDisplay();
         closeSettingsModal();
         showToast('Innstillinger lagret!', 'success');
+    }
+
+    // ===== Price categories =====
+
+    function ensurePriceCategories() {
+        if (!settings.priceCategories) {
+            settings.priceCategories = [];
+            // Migrate old single tilePrice
+            if (settings.tilePrice && settings.tilePrice > 0) {
+                settings.priceCategories.push({ name: 'Standard', price: settings.tilePrice });
+            }
+        }
+    }
+
+    function renderPriceCategories() {
+        ensurePriceCategories();
+        priceCatList.innerHTML = '';
+        if (settings.priceCategories.length === 0) {
+            priceCatList.innerHTML = '<div class="price-cat-empty">Ingen priskategorier definert ennå.</div>';
+            return;
+        }
+        settings.priceCategories.forEach(function (cat, idx) {
+            var item = document.createElement('div');
+            item.className = 'price-cat-item';
+            item.innerHTML = '<span>' + escapeHtml(cat.name) + '</span>' +
+                '<span class="price-cat-amount">kr ' + cat.price.toLocaleString('nb-NO') + '</span>' +
+                '<button class="price-cat-remove" title="Fjern">&times;</button>';
+            item.querySelector('.price-cat-remove').addEventListener('click', function () {
+                removePriceCategory(idx);
+            });
+            priceCatList.appendChild(item);
+        });
+    }
+
+    function addPriceCategory() {
+        ensurePriceCategories();
+        var name = priceCatNameInput.value.trim();
+        var price = parseInt(priceCatPriceInput.value);
+        if (!name) { showToast('Skriv inn et kategorinavn.', 'error'); return; }
+        if (isNaN(price) || price < 0) { showToast('Skriv inn en gyldig pris.', 'error'); return; }
+        settings.priceCategories.push({ name: name, price: price });
+        saveSettings();
+        priceCatNameInput.value = '';
+        priceCatPriceInput.value = '';
+        renderPriceCategories();
+        showToast('Priskategori "' + name + '" lagt til!', 'success');
+    }
+
+    function removePriceCategory(idx) {
+        ensurePriceCategories();
+        var removed = settings.priceCategories.splice(idx, 1);
+        saveSettings();
+        renderPriceCategories();
+        if (removed.length) showToast('Priskategori "' + removed[0].name + '" fjernet.', 'info');
+    }
+
+    function populatePriceSelect(selectedPrice) {
+        ensurePriceCategories();
+        tilePriceSelect.innerHTML = '<option value="0">Ingen pris</option>';
+        var matched = false;
+        settings.priceCategories.forEach(function (cat) {
+            var opt = document.createElement('option');
+            opt.value = cat.price;
+            opt.textContent = cat.name + ' — kr ' + cat.price.toLocaleString('nb-NO');
+            if (selectedPrice && cat.price === selectedPrice) {
+                opt.selected = true;
+                matched = true;
+            }
+            tilePriceSelect.appendChild(opt);
+        });
+        // If tile has a custom price not in categories, add it as an option
+        if (selectedPrice && selectedPrice > 0 && !matched) {
+            var custom = document.createElement('option');
+            custom.value = selectedPrice;
+            custom.textContent = 'Egendefinert — kr ' + selectedPrice.toLocaleString('nb-NO');
+            custom.selected = true;
+            tilePriceSelect.appendChild(custom);
+        }
     }
 
     // ===== Storage =====
@@ -381,23 +459,36 @@
         var soldCount = Object.keys(tiles).length;
         var total = ROWS * COLS;
         var percent = Math.round((soldCount / total) * 100);
-        var price = settings.tilePrice || 0;
+
+        var totalRaised = 0;
+        Object.keys(tiles).forEach(function (key) {
+            var d = getTileData(key);
+            if (d && d.price) totalRaised += d.price;
+        });
 
         soldCountEl.textContent = soldCount;
         availableCountEl.textContent = total - soldCount;
         progressEl.textContent = percent + '%';
         progressBarEl.style.width = percent + '%';
-        raisedAmountEl.textContent = price > 0 ? 'kr ' + (soldCount * price).toLocaleString('nb-NO') : '-';
+        raisedAmountEl.textContent = totalRaised > 0 ? 'kr ' + totalRaised.toLocaleString('nb-NO') : '-';
     }
 
     function updatePriceDisplay() {
-        var price = settings.tilePrice || 0;
-        if (price > 0) {
-            legendPrice.textContent = 'Pris per flis: kr ' + price.toLocaleString('nb-NO');
-            legendPrice.style.display = 'block';
-        } else {
+        ensurePriceCategories();
+        var cats = settings.priceCategories;
+        if (cats.length === 0) {
             legendPrice.style.display = 'none';
+            return;
         }
+        var prices = cats.map(function (c) { return c.price; });
+        var minP = Math.min.apply(null, prices);
+        var maxP = Math.max.apply(null, prices);
+        if (minP === maxP) {
+            legendPrice.textContent = 'Pris per flis: kr ' + minP.toLocaleString('nb-NO');
+        } else {
+            legendPrice.textContent = 'Pris: kr ' + minP.toLocaleString('nb-NO') + ' – ' + maxP.toLocaleString('nb-NO');
+        }
+        legendPrice.style.display = 'block';
     }
 
     // ===== Sponsor list =====
@@ -410,10 +501,11 @@
             if (!d) return;
             var p = key.split('-');
             var num = +p[0] * COLS + +p[1] + 1;
-            if (!names[d.name]) names[d.name] = { count: 0, logo: d.logo || null, nums: [], keys: [] };
+            if (!names[d.name]) names[d.name] = { count: 0, logo: d.logo || null, nums: [], keys: [], totalPrice: 0 };
             names[d.name].count++;
             names[d.name].nums.push(num);
             names[d.name].keys.push(key);
+            if (d.price) names[d.name].totalPrice += d.price;
         });
 
         var sorted = Object.keys(names).sort(function (a, b) {
@@ -448,7 +540,8 @@
             tilesEl.className = 'sponsor-card-tiles';
             info.nums.sort(function(a, b) { return a - b; });
             var numsText = info.nums.length <= 5 ? ' (#' + info.nums.join(', #') + ')' : '';
-            tilesEl.textContent = info.count + (info.count === 1 ? ' flis' : ' fliser') + numsText;
+            var priceText = info.totalPrice > 0 ? ' — kr ' + info.totalPrice.toLocaleString('nb-NO') : '';
+            tilesEl.textContent = info.count + (info.count === 1 ? ' flis' : ' fliser') + numsText + priceText;
             card.appendChild(tilesEl);
 
             // Click sponsor card to highlight their tiles on the field
@@ -518,15 +611,26 @@
         if (data) {
             html += '<div class="info-name">' + escapeHtml(data.name) + '</div>';
             html += '<div class="info-detail">Rad ' + (row + 1) + ', kolonne ' + (col + 1) + '</div>';
+            if (data.price && data.price > 0) {
+                html += '<div class="info-detail" style="margin-top:0.3rem">Pris: kr ' + data.price.toLocaleString('nb-NO') + '</div>';
+            }
             if (data.logo) {
                 html += '<div class="info-logo"><img src="' + data.logo + '" alt="Logo"></div>';
             }
         } else {
             html += '<div class="info-available">Denne flisen er ledig!</div>';
             html += '<div class="info-detail">Rad ' + (row + 1) + ', kolonne ' + (col + 1) + '</div>';
-            var price = settings.tilePrice || 0;
-            if (price > 0) {
-                html += '<div class="info-detail" style="margin-top:0.5rem">Pris: kr ' + price.toLocaleString('nb-NO') + '</div>';
+            ensurePriceCategories();
+            var cats = settings.priceCategories;
+            if (cats.length > 0) {
+                var prices = cats.map(function (c) { return c.price; });
+                var minP = Math.min.apply(null, prices);
+                var maxP = Math.max.apply(null, prices);
+                if (minP === maxP) {
+                    html += '<div class="info-detail" style="margin-top:0.5rem">Pris: kr ' + minP.toLocaleString('nb-NO') + '</div>';
+                } else {
+                    html += '<div class="info-detail" style="margin-top:0.5rem">Pris: fra kr ' + minP.toLocaleString('nb-NO') + '</div>';
+                }
             }
         }
 
@@ -614,6 +718,7 @@
         modalTitle.textContent = 'Flis #' + tileNum + ' (rad ' + (row + 1) + ', kolonne ' + (col + 1) + ')';
         nameInput.value = data ? data.name : '';
         currentLogo = data ? (data.logo || null) : null;
+        populatePriceSelect(data ? (data.price || 0) : 0);
         updateLogoPreview();
         clearBtn.style.display = data ? 'block' : 'none';
         modalOverlay.classList.add('active');
@@ -627,6 +732,7 @@
         var first = getTileData(selectedTiles[0]);
         nameInput.value = first ? first.name : '';
         currentLogo = first ? (first.logo || null) : null;
+        populatePriceSelect(first ? (first.price || 0) : 0);
         updateLogoPreview();
         clearBtn.style.display = first ? 'block' : 'none';
         modalOverlay.classList.add('active');
@@ -656,10 +762,12 @@
         var name = nameInput.value.trim();
         var keys = currentTile.keys;
         var groupId = keys.length > 1 ? 'g-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5) : null;
+        var price = parseInt(tilePriceSelect.value) || 0;
 
         if (name) {
-            keys.forEach(function (k) { setTileData(k, name, currentLogo, groupId); });
-            showToast(keys.length > 1 ? keys.length + ' fliser tildelt til ' + name : 'Flis lagret: ' + name, 'success');
+            keys.forEach(function (k) { setTileData(k, name, currentLogo, groupId, price); });
+            var priceText = price > 0 ? ' (kr ' + price.toLocaleString('nb-NO') + ')' : '';
+            showToast(keys.length > 1 ? keys.length + ' fliser tildelt til ' + name + priceText : 'Flis lagret: ' + name + priceText, 'success');
         } else {
             keys.forEach(function (k) { delete tiles[k]; });
             showToast('Flis(er) tømt', 'info');
@@ -771,10 +879,11 @@
     // ===== Excel =====
 
     function exportToExcel() {
-        var data = [];
+        // Sheet 1: Grid overview
+        var gridData = [];
         var header = [];
         for (var h = 0; h < COLS; h++) header.push('Kol ' + (h + 1));
-        data.push(header);
+        gridData.push(header);
         for (var r = 0; r < ROWS; r++) {
             var row = [];
             for (var c = 0; c < COLS; c++) {
@@ -782,13 +891,32 @@
                 var num = r * COLS + c + 1;
                 row.push(d ? '#' + num + ' ' + d.name : '#' + num);
             }
-            data.push(row);
+            gridData.push(row);
         }
-        var ws = XLSX.utils.aoa_to_sheet(data);
-        ws['!cols'] = [];
-        for (var i = 0; i < COLS; i++) ws['!cols'].push({ wch: 14 });
+
+        // Sheet 2: Sponsor details with prices
+        var detailData = [['Flis #', 'Rad', 'Kolonne', 'Navn', 'Pris (kr)']];
+        Object.keys(tiles).sort(function (a, b) {
+            var pa = a.split('-'); var pb = b.split('-');
+            return (+pa[0] * COLS + +pa[1]) - (+pb[0] * COLS + +pb[1]);
+        }).forEach(function (key) {
+            var d = getTileData(key);
+            if (!d) return;
+            var p = key.split('-');
+            var num = +p[0] * COLS + +p[1] + 1;
+            detailData.push([num, +p[0] + 1, +p[1] + 1, d.name, d.price || 0]);
+        });
+
+        var ws1 = XLSX.utils.aoa_to_sheet(gridData);
+        ws1['!cols'] = [];
+        for (var i = 0; i < COLS; i++) ws1['!cols'].push({ wch: 14 });
+
+        var ws2 = XLSX.utils.aoa_to_sheet(detailData);
+        ws2['!cols'] = [{ wch: 8 }, { wch: 6 }, { wch: 10 }, { wch: 25 }, { wch: 12 }];
+
         var wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Fotballbane');
+        XLSX.utils.book_append_sheet(wb, ws1, 'Fotballbane');
+        XLSX.utils.book_append_sheet(wb, ws2, 'Sponsordetaljer');
         XLSX.writeFile(wb, 'nidelv-il-fliser.xlsx');
         showToast('Excel-fil eksportert!', 'success');
     }
@@ -895,6 +1023,8 @@
     settingsCancelBtn.addEventListener('click', closeSettingsModal);
     settingsCloseBtn.addEventListener('click', closeSettingsModal);
     settingsOverlay.addEventListener('click', function (e) { if (e.target === settingsOverlay) closeSettingsModal(); });
+    addPriceCatBtn.addEventListener('click', addPriceCategory);
+    priceCatPriceInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') addPriceCategory(); });
 
     // Global keyboard
     document.addEventListener('keydown', function (e) {
@@ -910,6 +1040,7 @@
     // ===== Init =====
 
     loadData();
+    ensurePriceCategories();
     if (isAdmin()) setAdminMode(true);
     else setAdminMode(false);
     buildGrid();

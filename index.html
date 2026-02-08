@@ -180,6 +180,10 @@
             <div class="modal-body">
                 <label for="tile-name-input">Navn:</label>
                 <input type="text" id="tile-name-input" placeholder="Skriv inn navn..." maxlength="40">
+                <label for="tile-price-select" class="logo-label">Priskategori:</label>
+                <select id="tile-price-select" class="price-select">
+                    <option value="0">Ingen pris</option>
+                </select>
                 <label for="tile-logo-input" class="logo-label">Logo (valgfritt):</label>
                 <div class="logo-upload-area">
                     <div class="logo-preview" id="logo-preview"><span class="logo-placeholder">Ingen logo</span></div>
@@ -235,8 +239,13 @@
                 <button class="modal-close" id="settings-close-btn">&times;</button>
             </div>
             <div class="modal-body">
-                <label for="tile-price-input">Pris per flis (kr):</label>
-                <input type="number" id="tile-price-input" placeholder="F.eks. 500" min="0" step="50">
+                <label>Priskategorier:</label>
+                <div class="price-categories" id="price-categories-list"></div>
+                <div class="price-cat-add">
+                    <input type="text" id="price-cat-name" placeholder="Navn (f.eks. Standard)" class="price-cat-input">
+                    <input type="number" id="price-cat-price" placeholder="Pris (kr)" min="0" step="50" class="price-cat-input">
+                    <button class="btn btn-primary btn-small" id="add-price-cat-btn" type="button">Legg til</button>
+                </div>
                 <label for="new-password" class="logo-label">Endre admin-passord:</label>
                 <input type="password" id="new-password" placeholder="Nytt passord (min 4 tegn)">
                 <input type="password" id="confirm-password" placeholder="Bekreft nytt passord" style="margin-top:0.5rem">
