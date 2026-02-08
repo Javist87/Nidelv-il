@@ -16,7 +16,9 @@
     var highlightedTiles = [];
     var multiSelectMode = false;
     var selectedTiles = [];
-    var firstCorner = null; // for shift-click rectangular select
+    var firstCorner = null;
+    var zoomLevel = 1;
+    var activeSponsorName = null;
 
     // DOM refs
     var gridEl = document.getElementById('grid');
@@ -49,7 +51,22 @@
     var bgInput = document.getElementById('bg-input');
     var bgClearBtn = document.getElementById('bg-clear-btn');
     var fieldSurroundings = document.getElementById('field-surroundings');
+    var footballField = document.getElementById('football-field');
+    var fieldScroll = document.getElementById('field-scroll');
     var sponsorGrid = document.getElementById('sponsor-grid');
+    var legendPrice = document.getElementById('legend-price');
+    var toastContainer = document.getElementById('toast-container');
+
+    // Zoom DOM
+    var zoomInBtn = document.getElementById('zoom-in-btn');
+    var zoomOutBtn = document.getElementById('zoom-out-btn');
+    var zoomResetBtn = document.getElementById('zoom-reset-btn');
+
+    // Info popup DOM (viewer)
+    var infoOverlay = document.getElementById('info-overlay');
+    var infoTitle = document.getElementById('info-title');
+    var infoBody = document.getElementById('info-body');
+    var infoCloseBtn = document.getElementById('info-close-btn');
 
     // Admin DOM
     var adminBtn = document.getElementById('admin-btn');
@@ -73,6 +90,19 @@
     var newPasswordInput = document.getElementById('new-password');
     var confirmPasswordInput = document.getElementById('confirm-password');
 
+    // ===== Toast notifications =====
+
+    function showToast(message, type) {
+        var toast = document.createElement('div');
+        toast.className = 'toast' + (type ? ' ' + type : '');
+        toast.textContent = message;
+        toastContainer.appendChild(toast);
+        setTimeout(function () {
+            toast.classList.add('removing');
+            setTimeout(function () { toast.remove(); }, 300);
+        }, 3000);
+    }
+
     // ===== Helpers =====
 
     function tileKey(row, col) { return row + '-' + col; }
@@ -94,14 +124,12 @@
     // ===== Password hashing =====
 
     function hashPassword(password) {
-        // Simple hash for client-side use
         var hash = 0;
         for (var i = 0; i < password.length; i++) {
             var chr = password.charCodeAt(i);
             hash = ((hash << 5) - hash) + chr;
             hash |= 0;
         }
-        // Double hash for more entropy
         var str = String(hash);
         var hash2 = 0;
         for (var j = 0; j < str.length; j++) {
@@ -166,15 +194,15 @@
         var pwHash = hashPassword(pw);
 
         if (!settings.adminPasswordHash) {
-            // First time - set password
             settings.adminPasswordHash = pwHash;
             saveSettings();
             setAdminMode(true);
             closeLoginModal();
+            showToast('Admin-passord opprettet!', 'success');
         } else if (pwHash === settings.adminPasswordHash) {
-            // Correct password
             setAdminMode(true);
             closeLoginModal();
+            showToast('Logget inn som admin', 'success');
         } else {
             loginHint.textContent = 'Feil passord. Prøv igjen.';
             loginHint.className = 'login-hint error';
@@ -208,11 +236,11 @@
         var confirmPw = confirmPasswordInput.value;
         if (newPw) {
             if (newPw.length < 4) {
-                alert('Nytt passord må ha minst 4 tegn.');
+                showToast('Nytt passord må ha minst 4 tegn.', 'error');
                 return;
             }
             if (newPw !== confirmPw) {
-                alert('Passordene er ikke like.');
+                showToast('Passordene er ikke like.', 'error');
                 return;
             }
             settings.adminPasswordHash = hashPassword(newPw);
@@ -220,7 +248,9 @@
 
         saveSettings();
         updateStats();
+        updatePriceDisplay();
         closeSettingsModal();
+        showToast('Innstillinger lagret!', 'success');
     }
 
     // ===== Storage =====
@@ -360,6 +390,16 @@
         raisedAmountEl.textContent = price > 0 ? 'kr ' + (soldCount * price).toLocaleString('nb-NO') : '-';
     }
 
+    function updatePriceDisplay() {
+        var price = settings.tilePrice || 0;
+        if (price > 0) {
+            legendPrice.textContent = 'Pris per flis: kr ' + price.toLocaleString('nb-NO');
+            legendPrice.style.display = 'block';
+        } else {
+            legendPrice.style.display = 'none';
+        }
+    }
+
     // ===== Sponsor list =====
 
     function renderSponsorList() {
@@ -370,9 +410,10 @@
             if (!d) return;
             var p = key.split('-');
             var num = +p[0] * COLS + +p[1] + 1;
-            if (!names[d.name]) names[d.name] = { count: 0, logo: d.logo || null, nums: [] };
+            if (!names[d.name]) names[d.name] = { count: 0, logo: d.logo || null, nums: [], keys: [] };
             names[d.name].count++;
             names[d.name].nums.push(num);
+            names[d.name].keys.push(key);
         });
 
         var sorted = Object.keys(names).sort(function (a, b) {
@@ -388,6 +429,7 @@
             var info = names[name];
             var card = document.createElement('div');
             card.className = 'sponsor-card';
+            if (activeSponsorName === name) card.classList.add('active');
 
             if (info.logo) {
                 var img = document.createElement('img');
@@ -409,19 +451,97 @@
             tilesEl.textContent = info.count + (info.count === 1 ? ' flis' : ' fliser') + numsText;
             card.appendChild(tilesEl);
 
+            // Click sponsor card to highlight their tiles on the field
+            (function(sponsorName, keys) {
+                card.addEventListener('click', function () {
+                    highlightSponsorTiles(sponsorName, keys);
+                });
+            })(name, info.keys);
+
             sponsorGrid.appendChild(card);
         });
+    }
+
+    function highlightSponsorTiles(name, keys) {
+        clearHighlights();
+
+        if (activeSponsorName === name) {
+            // Toggle off
+            activeSponsorName = null;
+            renderSponsorList();
+            return;
+        }
+
+        activeSponsorName = name;
+        highlightedTiles = keys.slice();
+
+        keys.forEach(function (key) {
+            var p = key.split('-');
+            var el = gridEl.children[+p[0] * COLS + +p[1]];
+            if (el) el.classList.add('highlight');
+        });
+
+        renderSponsorList();
+
+        // Scroll field into view
+        var fieldWrapper = document.getElementById('field-wrapper');
+        fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        showToast(name + ' — ' + keys.length + (keys.length === 1 ? ' flis' : ' fliser') + ' markert på banen', 'info');
     }
 
     // ===== Tile click =====
 
     function onTileClick(row, col, event) {
-        if (!isAdmin()) return;
-        if (multiSelectMode) {
-            toggleTileSelection(row, col, event && event.shiftKey);
+        if (isAdmin()) {
+            if (multiSelectMode) {
+                toggleTileSelection(row, col, event && event.shiftKey);
+            } else {
+                openModal(row, col);
+            }
         } else {
-            openModal(row, col);
+            // Viewer mode - show info popup
+            openInfoPopup(row, col);
         }
+    }
+
+    // ===== Viewer info popup =====
+
+    function openInfoPopup(row, col) {
+        var key = tileKey(row, col);
+        var data = getTileData(key);
+        var tileNum = row * COLS + col + 1;
+
+        infoTitle.textContent = 'Flis #' + tileNum;
+
+        var html = '';
+        if (data) {
+            html += '<div class="info-name">' + escapeHtml(data.name) + '</div>';
+            html += '<div class="info-detail">Rad ' + (row + 1) + ', kolonne ' + (col + 1) + '</div>';
+            if (data.logo) {
+                html += '<div class="info-logo"><img src="' + data.logo + '" alt="Logo"></div>';
+            }
+        } else {
+            html += '<div class="info-available">Denne flisen er ledig!</div>';
+            html += '<div class="info-detail">Rad ' + (row + 1) + ', kolonne ' + (col + 1) + '</div>';
+            var price = settings.tilePrice || 0;
+            if (price > 0) {
+                html += '<div class="info-detail" style="margin-top:0.5rem">Pris: kr ' + price.toLocaleString('nb-NO') + '</div>';
+            }
+        }
+
+        infoBody.innerHTML = html;
+        infoOverlay.classList.add('active');
+    }
+
+    function closeInfoPopup() {
+        infoOverlay.classList.remove('active');
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 
     // ===== Multi-select =====
@@ -449,16 +569,13 @@
 
     function toggleTileSelection(row, col, shiftKey) {
         if (shiftKey && firstCorner) {
-            // Select rectangular area between firstCorner and this tile
             var r1 = Math.min(firstCorner.row, row);
             var r2 = Math.max(firstCorner.row, row);
             var c1 = Math.min(firstCorner.col, col);
             var c2 = Math.max(firstCorner.col, col);
-            // Clear previous selection
             selectedTiles = [];
             var sel = gridEl.querySelectorAll('.selected');
             for (var i = 0; i < sel.length; i++) sel[i].classList.remove('selected');
-            // Select all tiles in rectangle
             for (var r = r1; r <= r2; r++) {
                 for (var c = c1; c <= c2; c++) {
                     var k = tileKey(r, c);
@@ -474,7 +591,6 @@
             return;
         }
 
-        // Normal click - toggle single tile and set as first corner
         firstCorner = { row: row, col: col };
         var key = tileKey(row, col);
         var idx = selectedTiles.indexOf(key);
@@ -543,8 +659,10 @@
 
         if (name) {
             keys.forEach(function (k) { setTileData(k, name, currentLogo, groupId); });
+            showToast(keys.length > 1 ? keys.length + ' fliser tildelt til ' + name : 'Flis lagret: ' + name, 'success');
         } else {
             keys.forEach(function (k) { delete tiles[k]; });
+            showToast('Flis(er) tømt', 'info');
         }
 
         saveData(); buildGrid(); updateStats(); renderSponsorList(); restoreHighlights(); closeModal();
@@ -553,7 +671,10 @@
 
     function clearTile() {
         if (!currentTile) return;
+        if (!confirm('Er du sikker på at du vil fjerne denne flisen/gruppen?')) return;
+
         var first = getTileData(currentTile.keys[0]);
+        var removedName = first ? first.name : '';
         if (first && first.group) {
             var gid = first.group;
             Object.keys(tiles).forEach(function (k) { var d = getTileData(k); if (d && d.group === gid) delete tiles[k]; });
@@ -562,6 +683,16 @@
         }
         saveData(); buildGrid(); updateStats(); renderSponsorList(); restoreHighlights(); closeModal();
         if (multiSelectMode) exitMultiSelectMode();
+        showToast(removedName ? removedName + ' fjernet' : 'Flis fjernet', 'info');
+    }
+
+    // ===== Zoom =====
+
+    function setZoom(level) {
+        zoomLevel = Math.max(0.5, Math.min(3, level));
+        var minW = Math.round(600 * zoomLevel);
+        footballField.style.minWidth = minW + 'px';
+        footballField.style.maxWidth = Math.round(1050 * zoomLevel) + 'px';
     }
 
     // ===== Background =====
@@ -579,6 +710,7 @@
             saveSettings();
             fieldSurroundings.style.backgroundImage = 'url(' + url + ')';
             bgClearBtn.style.display = 'inline-flex';
+            showToast('Bakgrunnsbilde oppdatert!', 'success');
         });
     }
 
@@ -587,12 +719,14 @@
         saveSettings();
         fieldSurroundings.style.backgroundImage = '';
         bgClearBtn.style.display = 'none';
+        showToast('Bakgrunnsbilde fjernet', 'info');
     }
 
     // ===== Search =====
 
     function searchTiles() {
         clearHighlights();
+        activeSponsorName = null;
         var q = searchInput.value.trim().toLowerCase();
         if (!q) return;
         highlightedTiles = [];
@@ -606,14 +740,18 @@
             }
         });
         if (highlightedTiles.length === 0) {
-            alert('Ingen fliser funnet med "' + searchInput.value.trim() + '"');
-        } else if (highlightedTiles.length <= 10) {
-            var nums = highlightedTiles.map(function(key) {
-                var p = key.split('-');
-                return '#' + (+p[0] * COLS + +p[1] + 1);
-            });
-            alert('Funnet ' + highlightedTiles.length + ' fliser: ' + nums.join(', '));
+            showToast('Ingen fliser funnet med "' + searchInput.value.trim() + '"', 'error');
+        } else {
+            var nums = [];
+            if (highlightedTiles.length <= 10) {
+                nums = highlightedTiles.map(function(key) {
+                    var p = key.split('-');
+                    return '#' + (+p[0] * COLS + +p[1] + 1);
+                });
+            }
+            showToast('Funnet ' + highlightedTiles.length + ' fliser' + (nums.length ? ': ' + nums.join(', ') : ''), 'success');
         }
+        renderSponsorList();
     }
 
     function clearHighlights() {
@@ -634,7 +772,6 @@
 
     function exportToExcel() {
         var data = [];
-        // Header row with column numbers
         var header = [];
         for (var h = 0; h < COLS; h++) header.push('Kol ' + (h + 1));
         data.push(header);
@@ -653,6 +790,7 @@
         var wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Fotballbane');
         XLSX.writeFile(wb, 'nidelv-il-fliser.xlsx');
+        showToast('Excel-fil eksportert!', 'success');
     }
 
     function importFromExcel(file) {
@@ -682,9 +820,9 @@
                 }
                 tiles = newTiles;
                 saveData(); buildGrid(); updateStats(); renderSponsorList(); clearHighlights();
-                alert('Importert! ' + Object.keys(tiles).length + ' fliser lastet inn.');
+                showToast('Importert! ' + Object.keys(tiles).length + ' fliser lastet inn.', 'success');
             } catch (err) {
-                alert('Kunne ikke lese filen.');
+                showToast('Kunne ikke lese filen.', 'error');
                 console.error(err);
             }
         };
@@ -709,6 +847,10 @@
     });
     removeLogoBtn.addEventListener('click', function () { currentLogo = null; updateLogoPreview(); });
 
+    // Info popup (viewer)
+    infoCloseBtn.addEventListener('click', closeInfoPopup);
+    infoOverlay.addEventListener('click', function (e) { if (e.target === infoOverlay) closeInfoPopup(); });
+
     // Multi-select
     multiselectBtn.addEventListener('click', function () { multiSelectMode ? exitMultiSelectMode() : enterMultiSelectMode(); });
     assignBtn.addEventListener('click', openMultiModal);
@@ -718,6 +860,11 @@
     bgInput.addEventListener('change', function (e) { var f = e.target.files[0]; if (f) { setBackgroundImage(f); bgInput.value = ''; } });
     bgClearBtn.addEventListener('click', clearBackground);
 
+    // Zoom
+    zoomInBtn.addEventListener('click', function () { setZoom(zoomLevel + 0.5); });
+    zoomOutBtn.addEventListener('click', function () { setZoom(zoomLevel - 0.5); });
+    zoomResetBtn.addEventListener('click', function () { setZoom(1); });
+
     // Excel
     exportBtn.addEventListener('click', exportToExcel);
     importInput.addEventListener('change', function (e) { var f = e.target.files[0]; if (f) { importFromExcel(f); importInput.value = ''; } });
@@ -725,7 +872,13 @@
     // Search
     searchBtn.addEventListener('click', searchTiles);
     searchInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') searchTiles(); });
-    searchInput.addEventListener('input', function () { if (!searchInput.value.trim()) clearHighlights(); });
+    searchInput.addEventListener('input', function () {
+        if (!searchInput.value.trim()) {
+            clearHighlights();
+            activeSponsorName = null;
+            renderSponsorList();
+        }
+    });
 
     // Admin login
     adminBtn.addEventListener('click', openLoginModal);
@@ -734,7 +887,7 @@
     loginCloseBtn.addEventListener('click', closeLoginModal);
     loginOverlay.addEventListener('click', function (e) { if (e.target === loginOverlay) closeLoginModal(); });
     adminPassword.addEventListener('keydown', function (e) { if (e.key === 'Enter') handleLogin(); if (e.key === 'Escape') closeLoginModal(); });
-    logoutBtn.addEventListener('click', function () { setAdminMode(false); });
+    logoutBtn.addEventListener('click', function () { setAdminMode(false); showToast('Logget ut', 'info'); });
 
     // Settings
     settingsBtn.addEventListener('click', openSettingsModal);
@@ -747,6 +900,7 @@
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             if (modalOverlay.classList.contains('active')) closeModal();
+            else if (infoOverlay.classList.contains('active')) closeInfoPopup();
             else if (loginOverlay.classList.contains('active')) closeLoginModal();
             else if (settingsOverlay.classList.contains('active')) closeSettingsModal();
             else if (multiSelectMode) exitMultiSelectMode();
@@ -760,6 +914,7 @@
     else setAdminMode(false);
     buildGrid();
     updateStats();
+    updatePriceDisplay();
     renderSponsorList();
     loadBackground();
 })();

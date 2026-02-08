@@ -105,33 +105,42 @@
             <div class="legend-item"><span class="legend-color legend-sold"></span><span>Solgt (person)</span></div>
             <div class="legend-item"><span class="legend-color legend-sponsor"></span><span>Sponsor (logo)</span></div>
             <div class="legend-item"><span class="legend-color legend-highlight"></span><span>Søketreff</span></div>
+            <div class="legend-price" id="legend-price" style="display:none"></div>
         </section>
 
-        <div class="field-wrapper">
-            <div class="field-surroundings" id="field-surroundings">
-                <div class="football-field" id="football-field">
-                    <svg class="field-markings" viewBox="0 0 1050 680" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="5" y="5" width="1040" height="670" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="3"/>
-                        <line x1="525" y1="5" x2="525" y2="675" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                        <circle cx="525" cy="340" r="91.5" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                        <circle cx="525" cy="340" r="5" fill="rgba(255,255,255,0.6)"/>
-                        <rect x="5" y="138.5" width="165" height="403" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                        <rect x="880" y="138.5" width="165" height="403" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                        <rect x="5" y="248.5" width="55" height="183" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                        <rect x="990" y="248.5" width="55" height="183" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                        <circle cx="115" cy="340" r="4" fill="rgba(255,255,255,0.6)"/>
-                        <circle cx="935" cy="340" r="4" fill="rgba(255,255,255,0.6)"/>
-                        <path d="M 165 267 A 91.5 91.5 0 0 1 165 413" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                        <path d="M 885 267 A 91.5 91.5 0 0 0 885 413" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                        <path d="M 15 5 A 10 10 0 0 0 5 15" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                        <path d="M 1035 5 A 10 10 0 0 1 1045 15" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                        <path d="M 5 665 A 10 10 0 0 0 15 675" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                        <path d="M 1045 665 A 10 10 0 0 1 1035 675" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-                        <rect x="-20" y="293" width="25" height="94" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" rx="2"/>
-                        <rect x="1045" y="293" width="25" height="94" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" rx="2"/>
-                    </svg>
-                    <div class="grid" id="grid"></div>
-                    <div class="logo-overlays" id="logo-overlays"></div>
+        <div class="field-wrapper" id="field-wrapper">
+            <!-- Zoom controls -->
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="zoom-in-btn" title="Zoom inn">+</button>
+                <button class="zoom-btn" id="zoom-reset-btn" title="Tilbakestill zoom">1:1</button>
+                <button class="zoom-btn" id="zoom-out-btn" title="Zoom ut">&minus;</button>
+            </div>
+            <div class="field-scroll" id="field-scroll">
+                <div class="field-surroundings" id="field-surroundings">
+                    <div class="football-field" id="football-field">
+                        <svg class="field-markings" viewBox="0 0 1050 680" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="5" y="5" width="1040" height="670" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="3"/>
+                            <line x1="525" y1="5" x2="525" y2="675" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                            <circle cx="525" cy="340" r="91.5" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                            <circle cx="525" cy="340" r="5" fill="rgba(255,255,255,0.6)"/>
+                            <rect x="5" y="138.5" width="165" height="403" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                            <rect x="880" y="138.5" width="165" height="403" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                            <rect x="5" y="248.5" width="55" height="183" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                            <rect x="990" y="248.5" width="55" height="183" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                            <circle cx="115" cy="340" r="4" fill="rgba(255,255,255,0.6)"/>
+                            <circle cx="935" cy="340" r="4" fill="rgba(255,255,255,0.6)"/>
+                            <path d="M 165 267 A 91.5 91.5 0 0 1 165 413" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                            <path d="M 885 267 A 91.5 91.5 0 0 0 885 413" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                            <path d="M 15 5 A 10 10 0 0 0 5 15" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                            <path d="M 1035 5 A 10 10 0 0 1 1045 15" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                            <path d="M 5 665 A 10 10 0 0 0 15 675" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                            <path d="M 1045 665 A 10 10 0 0 1 1035 675" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+                            <rect x="-20" y="293" width="25" height="94" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" rx="2"/>
+                            <rect x="1045" y="293" width="25" height="94" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" rx="2"/>
+                        </svg>
+                        <div class="grid" id="grid"></div>
+                        <div class="logo-overlays" id="logo-overlays"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -140,6 +149,15 @@
         <section class="sponsor-list" id="sponsor-list">
             <h2>Sponsorer og støttespillere</h2>
             <div class="sponsor-grid" id="sponsor-grid"></div>
+        </section>
+
+        <!-- Buy info for visitors -->
+        <section class="buy-info" id="buy-info">
+            <h2>Vil du kjøpe en flis?</h2>
+            <p>Støtt Nidelv IL og få ditt navn eller bedriftslogo på banen! Ta kontakt for å reservere din flis.</p>
+            <div class="buy-contact">
+                <a href="mailto:post@nidelvil.no" class="buy-btn">Send e-post</a>
+            </div>
         </section>
 
         <section class="about">
@@ -176,6 +194,17 @@
                 <button class="btn btn-secondary" id="cancel-btn">Avbryt</button>
                 <button class="btn btn-danger" id="clear-btn">Fjern alt</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Viewer info popup (read-only tile info) -->
+    <div class="modal-overlay" id="info-overlay">
+        <div class="modal modal-compact">
+            <div class="modal-header">
+                <h3 id="info-title">Flis</h3>
+                <button class="modal-close" id="info-close-btn">&times;</button>
+            </div>
+            <div class="modal-body info-body" id="info-body"></div>
         </div>
     </div>
 
@@ -218,6 +247,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toast-container"></div>
 
     <footer>
         <p>&copy; 2026 Nidelv IL. Alle rettigheter reservert.</p>
