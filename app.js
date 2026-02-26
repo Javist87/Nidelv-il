@@ -17,6 +17,9 @@
     var multiSelectMode = false;
     var selectedTiles = [];
     var firstCorner = null;
+    var isDragging = false;
+    var dragStart = null;
+    var presetSize = null;
     var zoomLevel = 1;
     var activeSponsorName = null;
 
@@ -405,6 +408,18 @@
                     tooltip.className = 'tooltip';
                     tooltip.textContent = '#' + tileNum + ' — ' + data.name;
                     tile.appendChild(tooltip);
+                    // Group outlines
+                    if (data.group) {
+                        var gid = data.group;
+                        var above = row > 0 ? getTileData(tileKey(row - 1, col)) : null;
+                        var below = row < ROWS - 1 ? getTileData(tileKey(row + 1, col)) : null;
+                        var left = col > 0 ? getTileData(tileKey(row, col - 1)) : null;
+                        var right = col < COLS - 1 ? getTileData(tileKey(row, col + 1)) : null;
+                        if (!above || above.group !== gid) tile.classList.add('group-top');
+                        if (!below || below.group !== gid) tile.classList.add('group-bottom');
+                        if (!left || left.group !== gid) tile.classList.add('group-left');
+                        if (!right || right.group !== gid) tile.classList.add('group-right');
+                    }
                 }
 
                 (function (r, c) {
@@ -614,12 +629,15 @@
     function onTileClick(row, col, event) {
         if (isAdmin()) {
             if (multiSelectMode) {
-                toggleTileSelection(row, col, event && event.shiftKey);
+                if (isDragging) return; // drag handler takes care of this
+                if (presetSize) {
+                    placePreset(row, col);
+                }
+                // Single click without preset or drag does nothing (use drag or preset)
             } else {
                 openModal(row, col);
             }
         } else {
-            // Viewer mode - show info popup
             openInfoPopup(row, col);
         }
     }
@@ -680,9 +698,14 @@
         multiSelectMode = true;
         selectedTiles = [];
         firstCorner = null;
+        isDragging = false;
+        dragStart = null;
+        presetSize = null;
         multiselectBtn.classList.add('active');
         selectionBar.style.display = 'flex';
         selectionHint.style.display = 'block';
+        gridEl.classList.add('dragging');
+        clearPresetButtons();
         updateSelectionCount();
     }
 
@@ -690,44 +713,106 @@
         multiSelectMode = false;
         selectedTiles = [];
         firstCorner = null;
+        isDragging = false;
+        dragStart = null;
+        presetSize = null;
         multiselectBtn.classList.remove('active');
         selectionBar.style.display = 'none';
         selectionHint.style.display = 'none';
-        var sel = gridEl.querySelectorAll('.selected');
-        for (var i = 0; i < sel.length; i++) sel[i].classList.remove('selected');
+        gridEl.classList.remove('dragging');
+        gridEl.classList.remove('preset-mode');
+        clearPresetButtons();
+        clearSelectionVisual();
     }
 
-    function toggleTileSelection(row, col, shiftKey) {
-        if (shiftKey && firstCorner) {
-            var r1 = Math.min(firstCorner.row, row);
-            var r2 = Math.max(firstCorner.row, row);
-            var c1 = Math.min(firstCorner.col, col);
-            var c2 = Math.max(firstCorner.col, col);
-            selectedTiles = [];
-            var sel = gridEl.querySelectorAll('.selected');
-            for (var i = 0; i < sel.length; i++) sel[i].classList.remove('selected');
-            for (var r = r1; r <= r2; r++) {
-                for (var c = c1; c <= c2; c++) {
-                    var k = tileKey(r, c);
-                    selectedTiles.push(k);
-                    var el = gridEl.children[r * COLS + c];
-                    if (el) el.classList.add('selected');
-                }
+    function clearSelectionVisual() {
+        var sel = gridEl.querySelectorAll('.selected, .preview');
+        for (var i = 0; i < sel.length; i++) {
+            sel[i].classList.remove('selected');
+            sel[i].classList.remove('preview');
+        }
+    }
+
+    function clearPresetButtons() {
+        var btns = document.querySelectorAll('.size-preset');
+        for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+    }
+
+    // Get grid row/col from mouse/touch event
+    function getGridPos(e) {
+        var rect = gridEl.getBoundingClientRect();
+        var touch = e.touches ? e.touches[0] : e;
+        var x = touch.clientX - rect.left;
+        var y = touch.clientY - rect.top;
+        var col = Math.floor(x / rect.width * COLS);
+        var row = Math.floor(y / rect.height * ROWS);
+        return {
+            row: Math.max(0, Math.min(ROWS - 1, row)),
+            col: Math.max(0, Math.min(COLS - 1, col))
+        };
+    }
+
+    function selectRect(r1, c1, r2, c2) {
+        clearSelectionVisual();
+        selectedTiles = [];
+        for (var r = r1; r <= r2; r++) {
+            for (var c = c1; c <= c2; c++) {
+                selectedTiles.push(tileKey(r, c));
+                var el = gridEl.children[r * COLS + c];
+                if (el) el.classList.add('selected');
             }
-            var w = c2 - c1 + 1;
-            var h = r2 - r1 + 1;
-            selectionCount.textContent = selectedTiles.length + ' fliser valgt (' + w + 'x' + h + ')';
-            assignBtn.disabled = false;
+        }
+        var w = c2 - c1 + 1;
+        var h = r2 - r1 + 1;
+        selectionCount.textContent = selectedTiles.length + ' fliser valgt (' + w + '×' + h + ')';
+        assignBtn.disabled = false;
+    }
+
+    function showPreview(row, col) {
+        var prev = gridEl.querySelectorAll('.preview');
+        for (var i = 0; i < prev.length; i++) prev[i].classList.remove('preview');
+        if (!presetSize) return;
+        var r2 = Math.min(ROWS - 1, row + presetSize.h - 1);
+        var c2 = Math.min(COLS - 1, col + presetSize.w - 1);
+        for (var r = row; r <= r2; r++) {
+            for (var c = col; c <= c2; c++) {
+                var el = gridEl.children[r * COLS + c];
+                if (el) el.classList.add('preview');
+            }
+        }
+    }
+
+    function activatePreset(w, h) {
+        clearPresetButtons();
+        clearSelectionVisual();
+        selectedTiles = [];
+        if (presetSize && presetSize.w === w && presetSize.h === h) {
+            // Toggle off
+            presetSize = null;
+            gridEl.classList.remove('preset-mode');
+            gridEl.classList.add('dragging');
+            selectionHint.textContent = 'Dra over feltet for å velge et område';
+            updateSelectionCount();
             return;
         }
-
-        firstCorner = { row: row, col: col };
-        var key = tileKey(row, col);
-        var idx = selectedTiles.indexOf(key);
-        var el = gridEl.children[row * COLS + col];
-        if (idx >= 0) { selectedTiles.splice(idx, 1); if (el) el.classList.remove('selected'); firstCorner = null; }
-        else { selectedTiles.push(key); if (el) el.classList.add('selected'); }
+        presetSize = { w: w, h: h };
+        gridEl.classList.add('preset-mode');
+        gridEl.classList.remove('dragging');
+        selectionHint.textContent = 'Klikk på banen for å plassere ' + w + '×' + h + '-området';
+        var btn = document.querySelector('.size-preset[data-w="' + w + '"][data-h="' + h + '"]');
+        if (btn) btn.classList.add('active');
         updateSelectionCount();
+    }
+
+    function placePreset(row, col) {
+        if (!presetSize) return;
+        var r2 = Math.min(ROWS - 1, row + presetSize.h - 1);
+        var c2 = Math.min(COLS - 1, col + presetSize.w - 1);
+        selectRect(row, col, r2, c2);
+        presetSize = null;
+        gridEl.classList.remove('preset-mode');
+        clearPresetButtons();
+        selectionHint.textContent = '';
     }
 
     function updateSelectionCount() {
@@ -1009,6 +1094,110 @@
     multiselectBtn.addEventListener('click', function () { multiSelectMode ? exitMultiSelectMode() : enterMultiSelectMode(); });
     assignBtn.addEventListener('click', openMultiModal);
     cancelSelectBtn.addEventListener('click', exitMultiSelectMode);
+
+    // Drag-to-select on grid
+    gridEl.addEventListener('mousedown', function (e) {
+        if (!multiSelectMode || presetSize) return;
+        e.preventDefault();
+        isDragging = true;
+        dragStart = getGridPos(e);
+        clearSelectionVisual();
+        selectedTiles = [];
+    });
+    gridEl.addEventListener('mousemove', function (e) {
+        if (multiSelectMode && presetSize && !isDragging) {
+            var pos = getGridPos(e);
+            showPreview(pos.row, pos.col);
+            return;
+        }
+        if (!isDragging || !dragStart) return;
+        e.preventDefault();
+        var pos = getGridPos(e);
+        var r1 = Math.min(dragStart.row, pos.row);
+        var r2 = Math.max(dragStart.row, pos.row);
+        var c1 = Math.min(dragStart.col, pos.col);
+        var c2 = Math.max(dragStart.col, pos.col);
+        clearSelectionVisual();
+        selectedTiles = [];
+        for (var r = r1; r <= r2; r++) {
+            for (var c = c1; c <= c2; c++) {
+                selectedTiles.push(tileKey(r, c));
+                var el = gridEl.children[r * COLS + c];
+                if (el) el.classList.add('selected');
+            }
+        }
+        var w = c2 - c1 + 1;
+        var h = r2 - r1 + 1;
+        selectionCount.textContent = selectedTiles.length + ' fliser valgt (' + w + '×' + h + ')';
+        assignBtn.disabled = false;
+    });
+    document.addEventListener('mouseup', function () {
+        if (!isDragging) return;
+        isDragging = false;
+        if (selectedTiles.length === 0 && dragStart) {
+            // Single click without drag
+            selectedTiles = [tileKey(dragStart.row, dragStart.col)];
+            var el = gridEl.children[dragStart.row * COLS + dragStart.col];
+            if (el) el.classList.add('selected');
+            selectionCount.textContent = '1 flis valgt';
+            assignBtn.disabled = false;
+        }
+        dragStart = null;
+    });
+
+    // Touch support for drag
+    gridEl.addEventListener('touchstart', function (e) {
+        if (!multiSelectMode || presetSize) return;
+        isDragging = true;
+        dragStart = getGridPos(e);
+        clearSelectionVisual();
+        selectedTiles = [];
+    }, { passive: true });
+    gridEl.addEventListener('touchmove', function (e) {
+        if (!isDragging || !dragStart) return;
+        e.preventDefault();
+        var pos = getGridPos(e);
+        var r1 = Math.min(dragStart.row, pos.row);
+        var r2 = Math.max(dragStart.row, pos.row);
+        var c1 = Math.min(dragStart.col, pos.col);
+        var c2 = Math.max(dragStart.col, pos.col);
+        clearSelectionVisual();
+        selectedTiles = [];
+        for (var r = r1; r <= r2; r++) {
+            for (var c = c1; c <= c2; c++) {
+                selectedTiles.push(tileKey(r, c));
+                var el = gridEl.children[r * COLS + c];
+                if (el) el.classList.add('selected');
+            }
+        }
+        var w = c2 - c1 + 1;
+        var h = r2 - r1 + 1;
+        selectionCount.textContent = selectedTiles.length + ' fliser valgt (' + w + '×' + h + ')';
+        assignBtn.disabled = false;
+    }, { passive: false });
+    gridEl.addEventListener('touchend', function () {
+        if (!isDragging) return;
+        isDragging = false;
+        dragStart = null;
+    });
+
+    // Size preset buttons
+    var presetBtns = document.querySelectorAll('.size-preset');
+    for (var pi = 0; pi < presetBtns.length; pi++) {
+        (function (btn) {
+            btn.addEventListener('click', function () {
+                activatePreset(parseInt(btn.dataset.w), parseInt(btn.dataset.h));
+            });
+        })(presetBtns[pi]);
+    }
+
+    // Clear preview when mouse leaves grid
+    gridEl.addEventListener('mouseleave', function () {
+        if (presetSize) {
+            var prev = gridEl.querySelectorAll('.preview');
+            for (var i = 0; i < prev.length; i++) prev[i].classList.remove('preview');
+        }
+    });
 
     // Background
     bgInput.addEventListener('change', function (e) { var f = e.target.files[0]; if (f) { setBackgroundImage(f); bgInput.value = ''; } });

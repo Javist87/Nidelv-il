@@ -105,10 +105,18 @@
         <section class="selection-bar" id="selection-bar" style="display:none">
             <div class="selection-info">
                 <span id="selection-count">0 fliser valgt</span>
-                <span class="selection-hint" id="selection-hint">Klikk en flis, deretter Shift+klikk en annen for rektangel</span>
+                <span class="selection-hint" id="selection-hint">Dra over feltet for å velge et område, eller bruk hurtigvalg</span>
+            </div>
+            <div class="size-presets" id="size-presets">
+                <span class="presets-label">Størrelse:</span>
+                <button class="size-preset" data-w="2" data-h="2">2×2</button>
+                <button class="size-preset" data-w="3" data-h="3">3×3</button>
+                <button class="size-preset" data-w="5" data-h="3">5×3</button>
+                <button class="size-preset" data-w="5" data-h="5">5×5</button>
+                <button class="size-preset" data-w="10" data-h="5">10×5</button>
             </div>
             <div class="selection-actions">
-                <button class="btn btn-primary" id="assign-btn">Tildel navn og logo</button>
+                <button class="btn btn-primary" id="assign-btn" disabled>Tildel navn og logo</button>
                 <button class="btn btn-secondary" id="cancel-select-btn">Avbryt</button>
             </div>
         </section>
