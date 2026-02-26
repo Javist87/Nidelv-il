@@ -400,6 +400,9 @@
                 numSpan.textContent = tileNum;
                 tile.appendChild(numSpan);
 
+                // Flip tooltip for top rows so it doesn't clip
+                if (row < 3) tile.classList.add('tooltip-below');
+
                 var key = tileKey(row, col);
                 var data = getTileData(key);
                 if (data) {
@@ -581,7 +584,7 @@
             tilesEl.className = 'sponsor-card-tiles';
             info.nums.sort(function(a, b) { return a - b; });
             var numsText = info.nums.length <= 5 ? ' (#' + info.nums.join(', #') + ')' : '';
-            var priceText = info.totalPrice > 0 ? ' — kr ' + info.totalPrice.toLocaleString('nb-NO') : '';
+            var priceText = isAdmin() && info.totalPrice > 0 ? ' — kr ' + info.totalPrice.toLocaleString('nb-NO') : '';
             tilesEl.textContent = info.count + (info.count === 1 ? ' flis' : ' fliser') + numsText + priceText;
             card.appendChild(tilesEl);
 
@@ -676,6 +679,7 @@
                     html += '<div class="info-detail" style="margin-top:0.5rem">Pris: fra kr ' + minP.toLocaleString('nb-NO') + '</div>';
                 }
             }
+            html += '<div class="info-cta"><a href="mailto:post@nidelvil.no" class="info-buy-btn">Ta kontakt for å kjøpe</a></div>';
         }
 
         infoBody.innerHTML = html;
@@ -707,6 +711,9 @@
         gridEl.classList.add('dragging');
         clearPresetButtons();
         updateSelectionCount();
+        // Scroll field into view so user can start selecting immediately
+        var fieldWrapper = document.getElementById('field-wrapper');
+        fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function exitMultiSelectMode() {
@@ -823,9 +830,32 @@
     // ===== Modal =====
 
     function openModal(row, col) {
-        currentTile = { keys: [tileKey(row, col)] };
-        var data = getTileData(tileKey(row, col));
+        var key = tileKey(row, col);
+        var data = getTileData(key);
         var tileNum = row * COLS + col + 1;
+
+        // If tile belongs to a group, offer to edit the whole group
+        if (data && data.group) {
+            var groupKeys = [];
+            Object.keys(tiles).forEach(function (k) {
+                var d = getTileData(k);
+                if (d && d.group === data.group) groupKeys.push(k);
+            });
+            if (groupKeys.length > 1) {
+                currentTile = { keys: groupKeys };
+                modalTitle.textContent = data.name + ' (' + groupKeys.length + ' fliser)';
+                nameInput.value = data.name;
+                currentLogo = data.logo || null;
+                populatePriceSelect(data.price || 0);
+                updateLogoPreview();
+                clearBtn.style.display = 'block';
+                modalOverlay.classList.add('active');
+                nameInput.focus();
+                return;
+            }
+        }
+
+        currentTile = { keys: [key] };
         modalTitle.textContent = 'Flis #' + tileNum + ' (rad ' + (row + 1) + ', kolonne ' + (col + 1) + ')';
         nameInput.value = data ? data.name : '';
         currentLogo = data ? (data.logo || null) : null;
@@ -1033,6 +1063,10 @@
     }
 
     function importFromExcel(file) {
+        var existingCount = Object.keys(tiles).length;
+        if (existingCount > 0 && !confirm('Du har ' + existingCount + ' fliser registrert. Import vil erstatte alle eksisterende data. Vil du fortsette?')) {
+            return;
+        }
         var reader = new FileReader();
         reader.onload = function (e) {
             try {
