@@ -38,7 +38,7 @@
     var closeBtn = document.getElementById('close-btn');
     var soldCountEl = document.getElementById('sold-count');
     var availableCountEl = document.getElementById('available-count');
-    var raisedAmountEl = document.getElementById('raised-amount');
+    var sponsorCountEl = document.getElementById('sponsor-count');
     var progressEl = document.getElementById('progress-percent');
     var progressBarEl = document.getElementById('progress-bar');
     var searchInput = document.getElementById('search-input');
@@ -101,9 +101,17 @@
     var fundraisingGoalInput = document.getElementById('fundraising-goal-input');
     var newPasswordInput = document.getElementById('new-password');
     var confirmPasswordInput = document.getElementById('confirm-password');
+    var contactEmailInput = document.getElementById('contact-email-input');
+    var contactPhoneInput = document.getElementById('contact-phone-input');
+    var buyEmailBtn = document.getElementById('buy-email-btn');
+    var buyPhoneBtn = document.getElementById('buy-phone-btn');
 
     // Tile price select
     var tilePriceSelect = document.getElementById('tile-price-select');
+
+    // Paid checkbox
+    var tilePaidCheckbox = document.getElementById('tile-paid-checkbox');
+    var paidHint = document.getElementById('paid-hint');
 
     // ===== Toast notifications =====
 
@@ -129,11 +137,12 @@
         return val;
     }
 
-    function setTileData(key, name, logo, group, price) {
+    function setTileData(key, name, logo, group, price, paid) {
         var data = { name: name };
         if (logo) data.logo = logo;
         if (group) data.group = group;
         if (price != null && price > 0) data.price = price;
+        if (paid) data.paid = true;
         tiles[key] = data;
     }
 
@@ -231,6 +240,8 @@
 
     function openSettingsModal() {
         fundraisingGoalInput.value = settings.fundraisingGoal || '';
+        contactEmailInput.value = settings.contactEmail || '';
+        contactPhoneInput.value = settings.contactPhone || '';
         newPasswordInput.value = '';
         confirmPasswordInput.value = '';
         renderPriceCategories();
@@ -249,6 +260,11 @@
             delete settings.fundraisingGoal;
         }
 
+        var email = contactEmailInput.value.trim();
+        var phone = contactPhoneInput.value.trim();
+        if (email) settings.contactEmail = email; else delete settings.contactEmail;
+        if (phone) settings.contactPhone = phone; else delete settings.contactPhone;
+
         var newPw = newPasswordInput.value;
         var confirmPw = confirmPasswordInput.value;
         if (newPw) {
@@ -266,8 +282,20 @@
         saveSettings();
         updateStats();
         updatePriceDisplay();
+        updateContactButtons();
         closeSettingsModal();
         showToast('Innstillinger lagret!', 'success');
+    }
+
+    function updateContactButtons() {
+        var email = settings.contactEmail || 'post@nidelvil.no';
+        buyEmailBtn.href = 'mailto:' + email;
+        if (settings.contactPhone) {
+            buyPhoneBtn.href = 'tel:' + settings.contactPhone.replace(/\s/g, '');
+            buyPhoneBtn.style.display = 'inline-flex';
+        } else {
+            buyPhoneBtn.style.display = 'none';
+        }
     }
 
     // ===== Price categories =====
@@ -406,10 +434,17 @@
                 var key = tileKey(row, col);
                 var data = getTileData(key);
                 if (data) {
-                    tile.classList.add(data.logo || data.group ? 'sponsor' : 'sold');
+                    if (data.logo || data.group) {
+                        tile.classList.add('sponsor');
+                    } else if (data.paid) {
+                        tile.classList.add('sold');
+                    } else {
+                        tile.classList.add('reserved');
+                    }
                     var tooltip = document.createElement('span');
                     tooltip.className = 'tooltip';
-                    tooltip.textContent = '#' + tileNum + ' — ' + data.name;
+                    var statusLabel = data.paid ? '' : ' (reservert)';
+                    tooltip.textContent = '#' + tileNum + ' — ' + data.name + statusLabel;
                     tile.appendChild(tooltip);
                     // Group outlines
                     if (data.group) {
@@ -493,19 +528,21 @@
         var percent = Math.round((soldCount / total) * 100);
 
         var totalRaised = 0;
+        var uniqueNames = {};
         Object.keys(tiles).forEach(function (key) {
             var d = getTileData(key);
             if (d && d.price) totalRaised += d.price;
+            if (d && d.name) uniqueNames[d.name] = true;
         });
 
         soldCountEl.textContent = soldCount;
         availableCountEl.textContent = total - soldCount;
+        sponsorCountEl.textContent = Object.keys(uniqueNames).length;
         progressEl.textContent = percent + '%';
         progressBarEl.style.width = percent + '%';
-        raisedAmountEl.textContent = 'kr ' + totalRaised.toLocaleString('nb-NO');
 
-        // Fundraising summary
-        fundraisingAmount.textContent = 'kr ' + totalRaised.toLocaleString('nb-NO');
+        // Fundraising summary with animated counter
+        animateCounter(fundraisingAmount, totalRaised);
         var goal = settings.fundraisingGoal || 0;
         if (goal > 0) {
             var goalPercent = Math.min(100, Math.round((totalRaised / goal) * 100));
@@ -515,6 +552,25 @@
             fundraisingGoalText.textContent = soldCount + ' av ' + total + ' fliser solgt';
             fundraisingBar.style.width = percent + '%';
         }
+    }
+
+    // Animated counter for fundraising amount
+    var counterAnimation = null;
+    function animateCounter(el, target) {
+        var currentText = el.textContent.replace(/[^\d]/g, '');
+        var current = parseInt(currentText) || 0;
+        if (current === target) return;
+        if (counterAnimation) cancelAnimationFrame(counterAnimation);
+        var start = performance.now();
+        var duration = 600;
+        function step(now) {
+            var progress = Math.min((now - start) / duration, 1);
+            var eased = 1 - Math.pow(1 - progress, 3);
+            var value = Math.round(current + (target - current) * eased);
+            el.textContent = 'kr ' + value.toLocaleString('nb-NO');
+            if (progress < 1) counterAnimation = requestAnimationFrame(step);
+        }
+        counterAnimation = requestAnimationFrame(step);
     }
 
     function updatePriceDisplay() {
@@ -679,7 +735,8 @@
                     html += '<div class="info-detail" style="margin-top:0.5rem">Pris: fra kr ' + minP.toLocaleString('nb-NO') + '</div>';
                 }
             }
-            html += '<div class="info-cta"><a href="mailto:post@nidelvil.no" class="info-buy-btn">Ta kontakt for å kjøpe</a></div>';
+            var contactEmail = settings.contactEmail || 'post@nidelvil.no';
+            html += '<div class="info-cta"><a href="mailto:' + contactEmail + '" class="info-buy-btn">Ta kontakt for å kjøpe</a></div>';
         }
 
         infoBody.innerHTML = html;
@@ -847,6 +904,7 @@
                 nameInput.value = data.name;
                 currentLogo = data.logo || null;
                 populatePriceSelect(data.price || 0);
+                updatePaidCheckbox(!!data.paid);
                 updateLogoPreview();
                 clearBtn.style.display = 'block';
                 modalOverlay.classList.add('active');
@@ -860,6 +918,7 @@
         nameInput.value = data ? data.name : '';
         currentLogo = data ? (data.logo || null) : null;
         populatePriceSelect(data ? (data.price || 0) : 0);
+        updatePaidCheckbox(data ? !!data.paid : false);
         updateLogoPreview();
         clearBtn.style.display = data ? 'block' : 'none';
         modalOverlay.classList.add('active');
@@ -874,11 +933,22 @@
         nameInput.value = first ? first.name : '';
         currentLogo = first ? (first.logo || null) : null;
         populatePriceSelect(first ? (first.price || 0) : 0);
+        updatePaidCheckbox(first ? !!first.paid : false);
         updateLogoPreview();
         clearBtn.style.display = first ? 'block' : 'none';
         modalOverlay.classList.add('active');
         nameInput.focus();
     }
+
+    function updatePaidCheckbox(isPaid) {
+        tilePaidCheckbox.checked = isPaid;
+        paidHint.textContent = isPaid ? 'Betalt' : 'Reservert';
+        paidHint.className = 'paid-hint' + (isPaid ? ' is-paid' : '');
+    }
+
+    tilePaidCheckbox.addEventListener('change', function () {
+        updatePaidCheckbox(tilePaidCheckbox.checked);
+    });
 
     function updateLogoPreview() {
         if (currentLogo) {
@@ -904,11 +974,13 @@
         var keys = currentTile.keys;
         var groupId = keys.length > 1 ? 'g-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5) : null;
         var price = parseInt(tilePriceSelect.value) || 0;
+        var paid = tilePaidCheckbox.checked;
 
         if (name) {
-            keys.forEach(function (k) { setTileData(k, name, currentLogo, groupId, price); });
+            keys.forEach(function (k) { setTileData(k, name, currentLogo, groupId, price, paid); });
             var priceText = price > 0 ? ' (kr ' + price.toLocaleString('nb-NO') + ')' : '';
-            showToast(keys.length > 1 ? keys.length + ' fliser tildelt til ' + name + priceText : 'Flis lagret: ' + name + priceText, 'success');
+            var paidText = paid ? '' : ' [reservert]';
+            showToast(keys.length > 1 ? keys.length + ' fliser tildelt til ' + name + priceText + paidText : 'Flis lagret: ' + name + priceText + paidText, 'success');
         } else {
             keys.forEach(function (k) { delete tiles[k]; });
             showToast('Flis(er) tømt', 'info');
@@ -943,6 +1015,28 @@
         footballField.style.minWidth = minW + 'px';
         footballField.style.maxWidth = Math.round(1050 * zoomLevel) + 'px';
     }
+
+    // Pinch-to-zoom on mobile
+    var pinchStartDist = 0;
+    var pinchStartZoom = 1;
+    fieldScroll.addEventListener('touchstart', function (e) {
+        if (e.touches.length === 2) {
+            var dx = e.touches[0].clientX - e.touches[1].clientX;
+            var dy = e.touches[0].clientY - e.touches[1].clientY;
+            pinchStartDist = Math.sqrt(dx * dx + dy * dy);
+            pinchStartZoom = zoomLevel;
+        }
+    }, { passive: true });
+    fieldScroll.addEventListener('touchmove', function (e) {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            var dx = e.touches[0].clientX - e.touches[1].clientX;
+            var dy = e.touches[0].clientY - e.touches[1].clientY;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            var scale = dist / pinchStartDist;
+            setZoom(pinchStartZoom * scale);
+        }
+    }, { passive: false });
 
     // ===== Background =====
 
@@ -1035,8 +1129,8 @@
             gridData.push(row);
         }
 
-        // Sheet 2: Sponsor details with prices
-        var detailData = [['Flis #', 'Rad', 'Kolonne', 'Navn', 'Pris (kr)']];
+        // Sheet 2: Sponsor details with prices and status
+        var detailData = [['Flis #', 'Rad', 'Kolonne', 'Navn', 'Pris (kr)', 'Status']];
         Object.keys(tiles).sort(function (a, b) {
             var pa = a.split('-'); var pb = b.split('-');
             return (+pa[0] * COLS + +pa[1]) - (+pb[0] * COLS + +pb[1]);
@@ -1045,7 +1139,7 @@
             if (!d) return;
             var p = key.split('-');
             var num = +p[0] * COLS + +p[1] + 1;
-            detailData.push([num, +p[0] + 1, +p[1] + 1, d.name, d.price || 0]);
+            detailData.push([num, +p[0] + 1, +p[1] + 1, d.name, d.price || 0, d.paid ? 'Betalt' : 'Reservert']);
         });
 
         var ws1 = XLSX.utils.aoa_to_sheet(gridData);
@@ -1053,7 +1147,7 @@
         for (var i = 0; i < COLS; i++) ws1['!cols'].push({ wch: 14 });
 
         var ws2 = XLSX.utils.aoa_to_sheet(detailData);
-        ws2['!cols'] = [{ wch: 8 }, { wch: 6 }, { wch: 10 }, { wch: 25 }, { wch: 12 }];
+        ws2['!cols'] = [{ wch: 8 }, { wch: 6 }, { wch: 10 }, { wch: 25 }, { wch: 12 }, { wch: 10 }];
 
         var wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws1, 'Fotballbane');
@@ -1115,7 +1209,10 @@
     logoInput.addEventListener('change', function (e) {
         var f = e.target.files[0];
         if (!f) return;
-        resizeImage(f, MAX_LOGO_SIZE, function (url) { currentLogo = url; updateLogoPreview(); });
+        // Use higher quality for multi-tile groups
+        var tileCount = currentTile ? currentTile.keys.length : 1;
+        var logoSize = tileCount > 4 ? 400 : tileCount > 1 ? 250 : MAX_LOGO_SIZE;
+        resizeImage(f, logoSize, function (url) { currentLogo = url; updateLogoPreview(); });
         logoInput.value = '';
     });
     removeLogoBtn.addEventListener('click', function () { currentLogo = null; updateLogoPreview(); });
@@ -1275,6 +1372,27 @@
     addPriceCatBtn.addEventListener('click', addPriceCategory);
     priceCatPriceInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') addPriceCategory(); });
 
+    // Share buttons
+    document.getElementById('share-fb-btn').addEventListener('click', function () {
+        var url = encodeURIComponent(window.location.href);
+        window.open('https://www.facebook.com/sharer/sharer.php?u=' + url, '_blank', 'width=600,height=400');
+    });
+    document.getElementById('share-copy-btn').addEventListener('click', function () {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(window.location.href).then(function () {
+                showToast('Lenke kopiert!', 'success');
+            });
+        } else {
+            var input = document.createElement('input');
+            input.value = window.location.href;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            showToast('Lenke kopiert!', 'success');
+        }
+    });
+
     // Global keyboard
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
@@ -1295,6 +1413,7 @@
     buildGrid();
     updateStats();
     updatePriceDisplay();
+    updateContactButtons();
     renderSponsorList();
     loadBackground();
 })();

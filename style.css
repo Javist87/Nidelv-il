@@ -278,6 +278,56 @@ main {
     min-width: 0;
 }
 
+/* === Share buttons === */
+.share-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.share-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.share-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-main);
+    color: var(--text-dark);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.share-btn:hover {
+    background: #e8ecf2;
+    border-color: #ccd0d8;
+}
+
+.share-fb {
+    background: #1877f2;
+    color: white;
+    border-color: #1877f2;
+    padding: 0.4rem 0.6rem;
+}
+
+.share-fb:hover {
+    background: #166fe5;
+    border-color: #166fe5;
+}
+
 /* === Toolbar === */
 .toolbar {
     display: flex;
@@ -422,6 +472,7 @@ main {
 
 .legend-available { background: var(--grass-dark); }
 .legend-sold { background: var(--sold-color); }
+.legend-reserved { background: #c08a15; opacity: 0.6; }
 .legend-sponsor { background: var(--sponsor-color); }
 .legend-highlight { background: var(--highlight-color); }
 
@@ -515,6 +566,8 @@ main {
 .tile:hover { background: var(--available-hover); border-color: rgba(255,255,255,0.25); z-index: 4; }
 .tile.sold { background: rgba(230, 168, 23, 0.7); border-color: rgba(230, 168, 23, 0.4); }
 .tile.sold:hover { background: rgba(230, 168, 23, 0.85); border-color: rgba(230, 168, 23, 0.6); }
+.tile.reserved { background: rgba(230, 168, 23, 0.35); border-color: rgba(230, 168, 23, 0.2); }
+.tile.reserved:hover { background: rgba(230, 168, 23, 0.5); border-color: rgba(230, 168, 23, 0.35); }
 .tile.sponsor { background: rgba(59, 130, 246, 0.5); border-color: rgba(59, 130, 246, 0.3); }
 .tile.sponsor:hover { background: rgba(59, 130, 246, 0.65); border-color: rgba(59, 130, 246, 0.5); }
 .tile.selected { background: rgba(168, 85, 247, 0.6) !important; border-color: rgba(168, 85, 247, 0.8) !important; box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.9); }
@@ -759,6 +812,15 @@ main {
     box-shadow: 0 4px 12px rgba(212,43,43,0.3);
 }
 
+.buy-btn-phone {
+    background: var(--nidelv-blue);
+}
+
+.buy-btn-phone:hover {
+    background: #2a4fa0;
+    box-shadow: 0 4px 12px rgba(26,58,138,0.3);
+}
+
 /* === Modal === */
 .modal-overlay {
     display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -804,7 +866,9 @@ main {
 
 .modal-body input[type="text"],
 .modal-body input[type="password"],
-.modal-body input[type="number"] {
+.modal-body input[type="number"],
+.modal-body input[type="email"],
+.modal-body input[type="tel"] {
     width: 100%; padding: 0.7rem 1rem;
     border: 2px solid #e0e0e0; border-radius: 8px;
     font-size: 1rem; transition: border-color 0.2s;
@@ -870,6 +934,66 @@ main {
     background: #b82525;
     transform: translateY(-1px);
     box-shadow: 0 3px 10px rgba(212,43,43,0.3);
+}
+
+/* Paid toggle */
+.paid-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #444;
+}
+
+.toggle-label input { display: none; }
+
+.toggle-switch {
+    width: 36px;
+    height: 20px;
+    background: #ccc;
+    border-radius: 10px;
+    position: relative;
+    transition: background 0.2s;
+}
+
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.toggle-label input:checked + .toggle-switch {
+    background: #22c55e;
+}
+
+.toggle-label input:checked + .toggle-switch::after {
+    transform: translateX(16px);
+}
+
+.paid-hint {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--nidelv-red);
+    transition: all 0.2s;
+}
+
+.paid-hint.is-paid {
+    color: #22c55e;
 }
 
 .login-hint {
