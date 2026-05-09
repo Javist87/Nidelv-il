@@ -947,27 +947,70 @@
         showToast('Excel-fil eksportert!', 'success');
     }
 
+    function parseImportedTileName(value) {
+        var text = String(value || '').trim();
+        if (!text) return '';
+        // Supports import from exported format: "#14 Sponsornavn"
+        var match = text.match(/^#\d+\s*(.*)$/);
+        if (match) return match[1].trim();
+        return text;
+    }
+
+    function parseDetailSheet(wb) {
+        var details = {};
+        var detailsSheet = wb.Sheets['Sponsordetaljer'];
+        if (!detailsSheet) return details;
+
+        var rows = XLSX.utils.sheet_to_json(detailsSheet, { header: 1, defval: '' });
+        for (var i = 1; i < rows.length; i++) {
+            var row = rows[i];
+            if (!row || !row.length) continue;
+            var tileNumber = parseInt(row[0]);
+            if (isNaN(tileNumber) || tileNumber < 1 || tileNumber > ROWS * COLS) continue;
+            var r = Math.floor((tileNumber - 1) / COLS);
+            var c = (tileNumber - 1) % COLS;
+            var key = tileKey(r, c);
+            details[key] = {
+                name: String(row[3] || '').trim(),
+                price: parseInt(row[4]) || 0
+            };
+        }
+
+        return details;
+    }
+
     function importFromExcel(file) {
         var reader = new FileReader();
         reader.onload = function (e) {
             try {
                 var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
                 var json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+                var detailMap = parseDetailSheet(wb);
                 var newTiles = {};
-                var maxR = Math.min(json.length, ROWS);
+                var rowOffset = 0;
+                if (json.length && json[0] && String(json[0][0] || '').toLowerCase().indexOf('kol') === 0) {
+                    rowOffset = 1;
+                }
+
+                var maxR = Math.min(json.length - rowOffset, ROWS);
                 for (var r = 0; r < maxR; r++) {
-                    if (!json[r]) continue;
-                    var maxC = Math.min(json[r].length, COLS);
+                    var sourceRow = json[r + rowOffset];
+                    if (!sourceRow) continue;
+                    var maxC = Math.min(sourceRow.length, COLS);
                     for (var c = 0; c < maxC; c++) {
-                        var v = String(json[r][c] || '').trim();
+                        var v = parseImportedTileName(sourceRow[c]);
                         if (v) {
                             var k = tileKey(r, c);
+                            var parsedPrice = detailMap[k] && detailMap[k].price ? detailMap[k].price : 0;
                             var ex = getTileData(k);
                             if (ex && ex.logo) {
                                 newTiles[k] = { name: v, logo: ex.logo };
                                 if (ex.group) newTiles[k].group = ex.group;
+                                if (parsedPrice > 0) newTiles[k].price = parsedPrice;
+                                else if (ex.price) newTiles[k].price = ex.price;
                             } else {
                                 newTiles[k] = { name: v };
+                                if (parsedPrice > 0) newTiles[k].price = parsedPrice;
                             }
                         }
                     }
